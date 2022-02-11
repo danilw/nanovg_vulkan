@@ -108,7 +108,7 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer cmd_buffer, Fra
   VkImageMemoryBarrier image_barrier = {
       .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
       .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-      .dstAccessMask = VK_ACCESS_NONE_KHR,
+      .dstAccessMask = 0,
       .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
       .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
       .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
