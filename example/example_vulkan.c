@@ -8,13 +8,13 @@
 #include <vulkan/vulkan.h>
 
 #ifndef DEMO_ANTIALIAS
-#	  define DEMO_ANTIALIAS 1
+#   define DEMO_ANTIALIAS 1
 #endif
 #ifndef DEMO_STENCIL_STROKES
-#	  define DEMO_STENCIL_STROKES 1
+#   define DEMO_STENCIL_STROKES 1
 #endif
 #ifndef DEMO_VULKAN_VALIDATON_LAYER
-#	  define DEMO_VULKAN_VALIDATON_LAYER 0
+#   define DEMO_VULKAN_VALIDATON_LAYER 0
 #endif
 
 #include "nanovg.h"
@@ -104,7 +104,7 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer cmd_buffer, Fra
   VkResult res;
 
   vkCmdEndRenderPass(cmd_buffer);
-  
+
   VkImageMemoryBarrier image_barrier = {
       .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
       .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
@@ -129,7 +129,7 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer cmd_buffer, Fra
             0, NULL,
             0, NULL,
             1, &image_barrier);
-  
+
   vkEndCommandBuffer(cmd_buffer);
 
   VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -212,7 +212,7 @@ int main() {
     printf("glfwCreateWindowSurface failed\n");
     exit(-1);
   }
-  
+
   uint32_t gpu_count = 0;
 
   res = vkEnumeratePhysicalDevices(instance, &gpu_count, NULL);
@@ -231,7 +231,7 @@ int main() {
     printf("vkEnumeratePhysicalDevices failed %d \n", res);
     exit(-1);
   }
-  
+
   uint32_t idx = 0;
   bool use_idx = false;
   for (uint32_t i = 0; i < gpu_count && (!use_idx); i++)
@@ -265,7 +265,7 @@ int main() {
   }
 
   printf("Using GPU device %lu\n", (unsigned long) idx);
-  
+
   VulkanDevice *device = createVulkanDevice(gpu[idx]);
 
   int winWidth, winHeight;
@@ -282,15 +282,15 @@ int main() {
   create_info.renderpass = fb.render_pass;
   create_info.cmdBuffer = cmd_buffer;
 
-	int flags = 0;
+  int flags = 0;
 #ifndef NDEBUG
-	flags |= NVG_DEBUG; // unused in nanovg_vk
+  flags |= NVG_DEBUG; // unused in nanovg_vk
 #endif
 #if DEMO_ANTIALIAS
-	flags |= NVG_ANTIALIAS;
+  flags |= NVG_ANTIALIAS;
 #endif
 #if DEMO_STENCIL_STROKES
-	flags |= NVG_STENCIL_STROKES;
+  flags |= NVG_STENCIL_STROKES;
 #endif
 
   NVGcontext *vg = nvgCreateVk(create_info, flags, queue);
@@ -334,7 +334,7 @@ int main() {
     renderGraph(vg, 5, 5, &fps);
 
     nvgEndFrame(vg);
-    
+
     submitFrame(device->device, queue, cmd_buffer, &fb);
 }
     glfwPollEvents();
@@ -352,11 +352,11 @@ int main() {
   vkDestroyInstance(instance, NULL);
 
   glfwDestroyWindow(window);
-  
+
   printf("Average Frame Time: %.2f ms\n", getGraphAverage(&fps) * 1000.0f);
   //printf("          CPU Time: %.2f ms\n", getGraphAverage(&cpuGraph) * 1000.0f);
   //printf("          GPU Time: %.2f ms\n", getGraphAverage(&gpuGraph) * 1000.0f);
-  
+
   glfwTerminate();
   return 0;
 }

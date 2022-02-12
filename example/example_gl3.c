@@ -117,15 +117,15 @@ int main()
 		printf("Could not init glew.\n");
 		return -1;
 	}
-	// GLEW generates GL error because it calls glGetString(GL_EXTENSIONS), we'll consume it here.
+	// GLEW generates GL error because it calls glGetString(GL_EXTENSIONS), we'll consumeP it here.
 	glGetError();
 #endif
 
 #ifdef NANOVG_GLAD
-    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
 		printf("Could not init glad.\n");
-        return -1;
-    }
+		return -1;
+	}
 #endif
 
 	int flags = 0;
