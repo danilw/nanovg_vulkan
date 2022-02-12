@@ -98,7 +98,7 @@ int main()
 #endif
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, 1);
 
-#ifdef DEMO_MSAA
+#if DEMO_MSAA
 	glfwWindowHint(GLFW_SAMPLES, 4);
 #endif
 	window = glfwCreateWindow(1000, 600, "NanoVG Example OpenGL 3.2", NULL, NULL);
