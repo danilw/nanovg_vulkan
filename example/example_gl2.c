@@ -18,13 +18,32 @@
 
 #include <stdio.h>
 #ifdef NANOVG_GLEW
-#  include <GL/glew.h>
+#	include <GL/glew.h>
 #endif
-#define GLFW_INCLUDE_GLEXT
+#ifdef __APPLE__
+#	define GLFW_INCLUDE_GLCOREARB
+#endif
+#ifdef NANOVG_GLAD
+#	include <glad/glad.h>
+#else
+#	define GLFW_INCLUDE_GLEXT
+#endif
 #include <GLFW/glfw3.h>
+
+#ifndef DEMO_ANTIALIAS
+#	define DEMO_ANTIALIAS 1
+#endif
+#ifndef DEMO_STENCIL_STROKES
+#	define DEMO_STENCIL_STROKES 1
+#endif
+#ifndef DEMO_MSAA
+#	define DEMO_MSAA 0
+#endif
+
 #include "nanovg.h"
 #define NANOVG_GL2_IMPLEMENTATION
 #include "nanovg_gl.h"
+
 #include "demo.h"
 #include "perf.h"
 
@@ -71,11 +90,11 @@ int main()
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-#ifdef DEMO_MSAA
+#if DEMO_MSAA
 	glfwWindowHint(GLFW_SAMPLES, 4);
 #endif
 
-	window = glfwCreateWindow(1000, 600, "NanoVG", NULL, NULL);
+	window = glfwCreateWindow(1000, 600, "NanoVG OpenGL 2.0", NULL, NULL);
 //	window = glfwCreateWindow(1000, 600, "NanoVG", glfwGetPrimaryMonitor(), NULL);
 	if (!window) {
 		glfwTerminate();
@@ -90,13 +109,30 @@ int main()
 		printf("Could not init glew.\n");
 		return -1;
 	}
+	// GLEW generates GL error because it calls glGetString(GL_EXTENSIONS), we'll consume it here.
+	glGetError();
 #endif
 
-#ifdef DEMO_MSAA
-	vg = nvgCreateGL2(NVG_STENCIL_STROKES | NVG_DEBUG);
-#else
-	vg = nvgCreateGL2(NVG_ANTIALIAS | NVG_STENCIL_STROKES | NVG_DEBUG);
+#ifdef NANOVG_GLAD
+    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+		printf("Could not init glad.\n");
+        return -1;
+    }
 #endif
+
+	int flags = 0;
+#ifndef NDEBUG
+	flags |= NVG_DEBUG;
+#endif
+#if !DEMO_MSAA && DEMO_ANTIALIAS
+	flags |= NVG_ANTIALIAS;
+#endif
+#if DEMO_STENCIL_STROKES
+	flags |= NVG_STENCIL_STROKES;
+#endif
+
+	vg = nvgCreateGL2(flags);
+
 	if (vg == NULL) {
 		printf("Could not init nanovg.\n");
 		return -1;

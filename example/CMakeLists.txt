@@ -12,6 +12,8 @@ add_subdirectory(../glfw glfw)
 
 option(BUILD_USE_GLAD "Use glad instead of glew" ON)
 
+option(BUILD_EXAMPLE_FBO "Build FBO Example (GL3)" OFF)
+option(BUILD_EXAMPLE_GL2 "Build Example using OpenGL2" OFF)
 option(BUILD_EXAMPLE_GL3 "Build Example using OpenGL3" ON)
 option(BUILD_EXAMPLE_VULKAN "Build Example using Vulkan" ON)
 
@@ -23,7 +25,7 @@ add_compile_definitions(DEMO_MSAA=$<BOOL:${DEMO_MSAA}>)
 add_compile_definitions(DEMO_ANTIALIAS=$<BOOL:${DEMO_ANTIALIAS}>)
 add_compile_definitions(DEMO_STENCIL_STROKES=$<BOOL:${DEMO_STENCIL_STROKES}>)
 
-include_directories(../src)
+set(COMMON_INCLUDE ../src)
 
 set(COMMON_SRC
     ../src/fontstash.h
@@ -55,57 +57,88 @@ if (BUILD_EXAMPLE_VULKAN)
         vulkan_util.h
     )
 
-    target_include_directories(example-vk PRIVATE ${Vulkan_INCLUDE_DIR})
+    target_include_directories(example-vk PRIVATE ${COMMON_INCLUDE} ${Vulkan_INCLUDE_DIR})
     target_compile_definitions(example-vk PRIVATE NANOVG_VULKAN_IMPLEMENTATION)
     target_link_libraries(example-vk PRIVATE glfw ${Vulkan_LIBRARY})
-endif() 
+endif()
+
+set(GL_EXAMPLE_SRC
+  ${COMMON_SRC}
+  ../src/nanovg_gl.h
+  ../src/nanovg_gl_utils.h
+)
+set(GL_EXAMPLE_LIBS glfw)
+set(GL_EXAMPLE_INCLUDES ${COMMON_INCLUDE})
+
+if (BUILD_EXAMPLE_GL3 OR BUILD_EXAMPLE_GL2)
+    if (BUILD_USE_GLAD)
+      set(GL_EXAMPLE_DEFS NANOVG_GLAD)
+      list(APPEND GL_EXAMPLE_SRC ../glad-3.2-compat/src/glad.c)
+      list(APPEND GL_EXAMPLE_INCLUDES ../glad-3.2-compat/include)
+    else()
+      # Build glew
+      set( ONLY_LIBS ON CACHE BOOL ""  )
+      set( glew-cmake_BUILD_SHARED OFF CACHE BOOL ""  )
+      set( glew-cmake_BUILD_STATIC ON CACHE BOOL ""  )
+      set(GL_EXAMPLE_DEFS NANVG_GLEW)
+      add_subdirectory(glew-cmake glew)
+      list(APPEND GL_EXAMPLE_LIBS libglew_static)
+    endif()
+endif()
 
 if (BUILD_EXAMPLE_GL3)
-if (BUILD_USE_GLAD)
-    add_executable(
-        example-gl3
-        ${COMMON_SRC}
-        ../src/nanovg_gl.h
-        ../src/nanovg_gl_utils.h
-        ../glad-3.2-compat/src/glad.c
-        example_gl3.c
-    )
-    target_include_directories(example-gl3 PRIVATE ../glad-3.2-compat/include)
-    target_compile_definitions(example-gl3 PRIVATE NANOVG_GLAD)
-    target_link_libraries(example-gl3 PRIVATE glfw)
-else()
-    # Build glew
-    set( ONLY_LIBS ON CACHE BOOL ""  )
-    set( glew-cmake_BUILD_SHARED OFF CACHE BOOL ""  )
-    set( glew-cmake_BUILD_STATIC ON CACHE BOOL ""  )
-    add_subdirectory(glew-cmake glew)
-    add_executable(
-        example-gl3
-        ${COMMON_SRC}
-        ../src/nanovg_gl.h
-        ../src/nanovg_gl_utils.h
-        example_gl3.c
-    )
-    target_include_directories(example-gl3 PRIVATE src)
-    target_compile_definitions(example-gl3 PRIVATE NANOVG_GLEW)
-    target_link_libraries(example-gl3 PRIVATE glfw libglew_static)
+  add_executable(
+      example-gl3
+      example_gl3.c
+      ${GL_EXAMPLE_SRC}
+  )
+  target_include_directories(example-gl3 PRIVATE ${GL_EXAMPLE_INCLUDES})
+  target_compile_definitions(example-gl3 PRIVATE ${GL_EXAMPLE_DEFS})
+  target_link_libraries(example-gl3 PRIVATE ${GL_EXAMPLE_LIBS})
 endif()
 
+if (BUILD_EXAMPLE_GL2)
+  add_executable(
+      example-gl2
+      example_gl2.c
+      ${GL_EXAMPLE_SRC}
+  )
+  target_include_directories(example-gl2 PRIVATE ${GL_EXAMPLE_INCLUDES})
+  target_compile_definitions(example-gl2 PRIVATE ${GL_EXAMPLE_DEFS})
+  target_link_libraries(example-gl2 PRIVATE ${GL_EXAMPLE_LIBS})
 endif()
 
+if (BUILD_EXAMPLE_FBO)
+  add_executable(
+      example-fbo
+      example_fbo.c
+      ${GL_EXAMPLE_SRC}
+  )
+  target_include_directories(example-fbo PRIVATE ${GL_EXAMPLE_INCLUDES})
+  target_compile_definitions(example-fbo PRIVATE ${GL_EXAMPLE_DEFS})
+  target_link_libraries(example-fbo PRIVATE ${GL_EXAMPLE_LIBS})
+endif()
 
-if (MSVC) 
+if (MSVC)
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS )
     set_source_files_properties(
         example_vulkan.c
         example_gl3.c
-        demo.c 
-        PROPERTIES COMPILE_FLAGS 
+        example_gl2.c
+        example_fbo.c
+        demo.c
+        PROPERTIES COMPILE_FLAGS
         /wd4244
     )
-
     set(BUILD_EXE_POSTFIX "-$<LOWER_CASE:${CMAKE_CXX_COMPILER_ID}-$<CONFIG>>" CACHE STRING "Append to executable name")
-    set_property(TARGET example-gl3 PROPERTY OUTPUT_NAME example-gl3${BUILD_EXE_POSTFIX})
-    set_property(TARGET example-vk PROPERTY OUTPUT_NAME example-vk${BUILD_EXE_POSTFIX})
-    set_property(TARGET example-vk example-gl3 PROPERTY RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}$<0:...>)
+
+    set(ALL_TARGETS example-vk example-gl3 example-gl2)
+    foreach(TARGET_NAME ${ALL_TARGETS})
+      if (TARGET ${TARGET_NAME})
+        set_property(TARGET ${TARGET_NAME} PROPERTY OUTPUT_NAME ${TARGET_NAME}${BUILD_EXE_POSTFIX})
+        set_property(TARGET ${TARGET_NAME} PROPERTY RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}$<0:...>)
+      endif()
+    endforeach()
 endif()
+
+set(CMAKE_VERBOSE_MAKEFILE ON)
