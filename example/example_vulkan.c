@@ -234,7 +234,8 @@ int main() {
 
   uint32_t idx = 0;
   bool use_idx = false;
-  for (uint32_t i = 0; i < gpu_count && (!use_idx); i++)
+  bool discrete_idx = false;
+  for (uint32_t i = 0; i < gpu_count && (!discrete_idx); i++)
   {
     uint32_t qfc = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(gpu[i], &qfc, NULL);
@@ -252,8 +253,14 @@ int main() {
 
       if ((queue_family_properties[j].queueFlags & VK_QUEUE_GRAPHICS_BIT) && supports_present)
       {
+        
+        VkPhysicalDeviceProperties pr;
+        vkGetPhysicalDeviceProperties(gpu[i], &pr);
         idx = i;
         use_idx = true;
+        if(pr.deviceType==VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU){
+          discrete_idx = true;
+        }
         break;
       }
     }
