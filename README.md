@@ -1,32 +1,53 @@
 added vulkan build, and cmake files, removed premake4.lua
 
-2021 update - fixed all errors, this code has no Validation errors and work correctly everywhere.
+**Why I made this** - I made it as a "test task for Vulkan related job" a year ago, for me this project has no real use. I would recommend for everyone use [**imgui**](https://github.com/ocornut/imgui) if you look for production-ready Vulkan UI. I will not support or update this project at all, the last update was just to fix bugs and Validation errors.
+
+### Contact: [**Join discord server**](https://discord.gg/JKyqWgt)
+___
+
+**2022 update** - thanks to [**@nidefawl**](https://github.com/nidefawl) [pull request](https://github.com/danilw/nanovg_vulkan/pull/5) with lots of changes:
+
+In this PR:
+1. Merge latest nanovg
+
+2. Fix Stencil Strokes: 
+I added a new enum to handle the 3 different pipelines used for stencil strokes.  
+I wanted to also use enums for the fill-path (nvgFill) to make the code cleaner, but haven't done that yet.
+
+3. I combined the 2 CMakeLists.txt into example/CMakeLists.txt and added some bits to make it easier to build and debug in MSVC/VSCode.
+
+4. I added GLAD as default gl-loader for the GL3 example. It can be switched back to GLEW (I kept glew to allow easier merge with main nanovg)
+
+5. I Increased the number of swapchain images to minimum 3 and updated the swapchain barrier to gain some extra performance.
+
+6. Spacebar renders the demo multiple times to add some 'load' when comparing performance
+___
+
+**2021 update** - fixed all errors, this code has no Validation errors and work correctly everywhere.
 
 Thanks to [**@fzwoch**](https://github.com/fzwoch) [commits](https://github.com/danilw/nanovg_vulkan/pull/1) **by default used `TOPOLOGY_TRIANGLE_LIST`**, because `TOPOLOGY_TRIANGLE_FAN` is optional in Vulkan. 
 
 To enable *TOPOLOGY_TRIANGLE_FAN* edit `src/nanovg_vk.h` and set there `#define USE_TOPOLOGY_TRIANGLE_FAN`
 
-**Why I made this** - I made it as a "test task for Vulkan related job" a year ago, for me this project has no real use. I would recommend for everyone use [**imgui**](https://github.com/ocornut/imgui) if you look for production-ready Vulkan UI. I will not support or update this project at all, the last update was just to fix bugs and Validation errors.
+Depth order bug on AMD fix by [**@leranger**](https://github.com/leranger) [6ee1009](https://github.com/danilw/nanovg_vulkan/commit/6ee100956134cab2aab67a6a8a7a5bda54c0f9ab).
+___
 
-### Contact: [**Join discord server**](https://discord.gg/JKyqWgt)
-
-Build:
+# Build:
 
 ```
-build with glfw:
-
-cd build_vulkan
-cp -r ../example example
-git clone https://github.com/glfw/glfw
+git clone --recursive https://github.com/danilw/nanovg_vulkan
+cd example
 mkdir build
 cd build
 cmake ../
 make
+cd ../
+./build/example-vk
 ```
 
 glfw used only to get Vulkan surface and Mouse input.
 
-Depth order bug on AMD - I test myself on Nvidia and AMD and have not seen any depth-bugs. But on some AMD videocards depth bugged. I can not test my self so I can not fix it. I dont see any "logical error" myself. *Screenshot from Vulkan version* of this build on AMD GPU, elements draw in the same order as in OpenGL. Should by fixed by [6ee1009](https://github.com/danilw/nanovg_vulkan/commit/6ee100956134cab2aab67a6a8a7a5bda54c0f9ab).
+**Screenshot** of Vulkan version from Linux:
 
 ![nvgvk](https://danilw.github.io/GLSL-howto/nvgvk.png)
 
