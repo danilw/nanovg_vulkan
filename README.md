@@ -36,7 +36,7 @@ ___
 
 ```
 git clone --recursive https://github.com/danilw/nanovg_vulkan
-cd example
+cd nanovg_vulkan/example
 mkdir build
 cd build
 cmake ../
