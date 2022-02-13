@@ -7,6 +7,16 @@
 
 #include <vulkan/vulkan.h>
 
+#ifndef DEMO_ANTIALIAS
+#   define DEMO_ANTIALIAS 1
+#endif
+#ifndef DEMO_STENCIL_STROKES
+#   define DEMO_STENCIL_STROKES 1
+#endif
+#ifndef DEMO_VULKAN_VALIDATON_LAYER
+#   define DEMO_VULKAN_VALIDATON_LAYER 0
+#endif
+
 #include "nanovg.h"
 #include "nanovg_vk.h"
 
@@ -14,6 +24,7 @@
 #include "perf.h"
 
 #include "vulkan_util.h"
+
 
 void errorcb(int error, const char *desc) {
   printf("GLFW error %d: %s\n", error, desc);
@@ -78,12 +89,12 @@ void prepareFrame(VkDevice device, VkCommandBuffer cmd_buffer, FrameBuffers *fb)
   vkCmdBeginRenderPass(cmd_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
   VkViewport viewport;
-  viewport.width = fb->buffer_size.width;
-  viewport.height = fb->buffer_size.height;
-  viewport.minDepth = (float)0.0f;
-  viewport.maxDepth = (float)1.0f;
-  viewport.x = rp_begin.renderArea.offset.x;
-  viewport.y = rp_begin.renderArea.offset.y;
+  viewport.width = (float) fb->buffer_size.width;
+  viewport.height = (float) fb->buffer_size.height;
+  viewport.minDepth = (float) 0.0f;
+  viewport.maxDepth = (float) 1.0f;
+  viewport.x = (float) rp_begin.renderArea.offset.x;
+  viewport.y = (float) rp_begin.renderArea.offset.y;
   vkCmdSetViewport(cmd_buffer, 0, 1, &viewport);
 
   VkRect2D scissor = rp_begin.renderArea;
@@ -93,11 +104,11 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer cmd_buffer, Fra
   VkResult res;
 
   vkCmdEndRenderPass(cmd_buffer);
-  
+
   VkImageMemoryBarrier image_barrier = {
       .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-      .srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT,
-      .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+      .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+      .dstAccessMask = 0,
       .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
       .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
       .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -112,13 +123,13 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer cmd_buffer, Fra
       },
   };
   vkCmdPipelineBarrier(cmd_buffer,
-            VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
             0,
             0, NULL,
             0, NULL,
             1, &image_barrier);
-  
+
   vkEndCommandBuffer(cmd_buffer);
 
   VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -177,7 +188,7 @@ int main() {
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-  window = glfwCreateWindow(1000, 600, "NanoVG", NULL, NULL);
+  window = glfwCreateWindow(1000, 600, "NanoVG Example Vulkan", NULL, NULL);
   if (!window) {
     glfwTerminate();
     return -1;
@@ -187,7 +198,12 @@ int main() {
 
   glfwSetTime(0);
 
-  VkInstance instance = createVkInstance(false);
+  bool enableValidationLayer = false;
+#if DEMO_VULKAN_VALIDATON_LAYER
+  enableValidationLayer = true;
+#endif
+
+  VkInstance instance = createVkInstance(enableValidationLayer);
 
   VkResult res;
   VkSurfaceKHR surface;
@@ -196,7 +212,7 @@ int main() {
     printf("glfwCreateWindowSurface failed\n");
     exit(-1);
   }
-  
+
   uint32_t gpu_count = 0;
 
   res = vkEnumeratePhysicalDevices(instance, &gpu_count, NULL);
@@ -209,13 +225,13 @@ int main() {
     exit(-1);
   }
 
-  VkPhysicalDevice gpu[gpu_count];
+  VkPhysicalDevice gpu[32];
   res = vkEnumeratePhysicalDevices(instance, &gpu_count, gpu);
   if (res != VK_SUCCESS && res != VK_INCOMPLETE) {
     printf("vkEnumeratePhysicalDevices failed %d \n", res);
     exit(-1);
   }
-  
+
   uint32_t idx = 0;
   bool use_idx = false;
   for (uint32_t i = 0; i < gpu_count && (!use_idx); i++)
@@ -249,7 +265,7 @@ int main() {
   }
 
   printf("Using GPU device %lu\n", (unsigned long) idx);
-  
+
   VulkanDevice *device = createVulkanDevice(gpu[idx]);
 
   int winWidth, winHeight;
@@ -266,7 +282,18 @@ int main() {
   create_info.renderpass = fb.render_pass;
   create_info.cmdBuffer = cmd_buffer;
 
-  NVGcontext *vg = nvgCreateVk(create_info, NVG_ANTIALIAS | NVG_STENCIL_STROKES, queue);
+  int flags = 0;
+#ifndef NDEBUG
+  flags |= NVG_DEBUG; // unused in nanovg_vk
+#endif
+#if DEMO_ANTIALIAS
+  flags |= NVG_ANTIALIAS;
+#endif
+#if DEMO_STENCIL_STROKES
+  flags |= NVG_STENCIL_STROKES;
+#endif
+
+  NVGcontext *vg = nvgCreateVk(create_info, flags, queue);
 
   DemoData data;
   PerfGraph fps;//, cpuGraph, gpuGraph;
@@ -302,12 +329,12 @@ int main() {
 
     glfwGetCursorPos(window, &mx, &my);
 
-    nvgBeginFrame(vg, winWidth, winHeight, pxRatio);
+    nvgBeginFrame(vg, (float)winWidth, (float)winHeight, pxRatio);
     renderDemo(vg, (float)mx, (float)my, (float)winWidth, (float)winHeight, (float)t, blowup, &data);
     renderGraph(vg, 5, 5, &fps);
 
     nvgEndFrame(vg);
-    
+
     submitFrame(device->device, queue, cmd_buffer, &fb);
 }
     glfwPollEvents();
@@ -320,14 +347,16 @@ int main() {
 
   destroyVulkanDevice(device);
 
+  destroyDebugCallback(instance);
+
   vkDestroyInstance(instance, NULL);
 
   glfwDestroyWindow(window);
-  
+
   printf("Average Frame Time: %.2f ms\n", getGraphAverage(&fps) * 1000.0f);
   //printf("          CPU Time: %.2f ms\n", getGraphAverage(&cpuGraph) * 1000.0f);
   //printf("          GPU Time: %.2f ms\n", getGraphAverage(&gpuGraph) * 1000.0f);
-  
+
   glfwTerminate();
   return 0;
 }

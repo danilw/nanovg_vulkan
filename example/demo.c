@@ -3,7 +3,10 @@
 #include <string.h>
 #include <math.h>
 #ifdef NANOVG_GLEW
-#  include <GL/glew.h>
+#  	include <GL/glew.h>
+#endif
+#ifdef NANOVG_GLAD
+#	include <glad/glad.h>
 #endif
 #ifndef NANOVG_VULKAN_IMPLEMENTATION
 #include <GLFW/glfw3.h>
@@ -30,7 +33,7 @@
 #define ICON_TRASH 0xE729
 
 //static float minf(float a, float b) { return a < b ? a : b; }
-static float maxf(float a, float b) { return a > b ? a : b; }
+//static float maxf(float a, float b) { return a > b ? a : b; }
 //static float absf(float a) { return a >= 0.0f ? a : -a; }
 static float clampf(float a, float mn, float mx) { return a < mn ? mn : (a > mx ? mx : a); }
 
@@ -103,7 +106,7 @@ void drawWindow(NVGcontext* vg, const char* title, float x, float y, float w, fl
 	nvgStrokeColor(vg, nvgRGBA(0,0,0,32));
 	nvgStroke(vg);
 
-	nvgFontSize(vg, 18.0f);
+	nvgFontSize(vg, 15.0f);
 	nvgFontFace(vg, "sans-bold");
 	nvgTextAlign(vg,NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
 
@@ -142,7 +145,7 @@ void drawSearchBox(NVGcontext* vg, const char* text, float x, float y, float w, 
 	nvgTextAlign(vg,NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
 	nvgText(vg, x+h*0.55f, y+h*0.55f, cpToUTF8(ICON_SEARCH,icon), NULL);
 
-	nvgFontSize(vg, 20.0f);
+	nvgFontSize(vg, 17.0f);
 	nvgFontFace(vg, "sans");
 	nvgFillColor(vg, nvgRGBA(255,255,255,32));
 
@@ -173,7 +176,7 @@ void drawDropDown(NVGcontext* vg, const char* text, float x, float y, float w, f
 	nvgStrokeColor(vg, nvgRGBA(0,0,0,48));
 	nvgStroke(vg);
 
-	nvgFontSize(vg, 20.0f);
+	nvgFontSize(vg, 17.0f);
 	nvgFontFace(vg, "sans");
 	nvgFillColor(vg, nvgRGBA(255,255,255,160));
 	nvgTextAlign(vg,NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
@@ -190,7 +193,7 @@ void drawLabel(NVGcontext* vg, const char* text, float x, float y, float w, floa
 {
 	NVG_NOTUSED(w);
 
-	nvgFontSize(vg, 18.0f);
+	nvgFontSize(vg, 15.0f);
 	nvgFontFace(vg, "sans");
 	nvgFillColor(vg, nvgRGBA(255,255,255,128));
 
@@ -219,7 +222,7 @@ void drawEditBox(NVGcontext* vg, const char* text, float x, float y, float w, fl
 
 	drawEditBoxBase(vg, x,y, w,h);
 
-	nvgFontSize(vg, 20.0f);
+	nvgFontSize(vg, 17.0f);
 	nvgFontFace(vg, "sans");
 	nvgFillColor(vg, nvgRGBA(255,255,255,64));
 	nvgTextAlign(vg,NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
@@ -235,13 +238,13 @@ void drawEditBoxNum(NVGcontext* vg,
 
 	uw = nvgTextBounds(vg, 0,0, units, NULL, NULL);
 
-	nvgFontSize(vg, 18.0f);
+	nvgFontSize(vg, 15.0f);
 	nvgFontFace(vg, "sans");
 	nvgFillColor(vg, nvgRGBA(255,255,255,64));
 	nvgTextAlign(vg,NVG_ALIGN_RIGHT|NVG_ALIGN_MIDDLE);
 	nvgText(vg, x+w-h*0.3f,y+h*0.5f,units, NULL);
 
-	nvgFontSize(vg, 20.0f);
+	nvgFontSize(vg, 17.0f);
 	nvgFontFace(vg, "sans");
 	nvgFillColor(vg, nvgRGBA(255,255,255,128));
 	nvgTextAlign(vg,NVG_ALIGN_RIGHT|NVG_ALIGN_MIDDLE);
@@ -254,7 +257,7 @@ void drawCheckBox(NVGcontext* vg, const char* text, float x, float y, float w, f
 	char icon[8];
 	NVG_NOTUSED(w);
 
-	nvgFontSize(vg, 18.0f);
+	nvgFontSize(vg, 15.0f);
 	nvgFontFace(vg, "sans");
 	nvgFillColor(vg, nvgRGBA(255,255,255,160));
 
@@ -267,7 +270,7 @@ void drawCheckBox(NVGcontext* vg, const char* text, float x, float y, float w, f
 	nvgFillPaint(vg, bg);
 	nvgFill(vg);
 
-	nvgFontSize(vg, 40);
+	nvgFontSize(vg, 33);
 	nvgFontFace(vg, "icons");
 	nvgFillColor(vg, nvgRGBA(255,255,255,128));
 	nvgTextAlign(vg,NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
@@ -296,7 +299,7 @@ void drawButton(NVGcontext* vg, int preicon, const char* text, float x, float y,
 	nvgStrokeColor(vg, nvgRGBA(0,0,0,48));
 	nvgStroke(vg);
 
-	nvgFontSize(vg, 20.0f);
+	nvgFontSize(vg, 17.0f);
 	nvgFontFace(vg, "sans-bold");
 	tw = nvgTextBounds(vg, 0,0, text, NULL, NULL);
 	if (preicon != 0) {
@@ -314,7 +317,7 @@ void drawButton(NVGcontext* vg, int preicon, const char* text, float x, float y,
 		nvgText(vg, x+w*0.5f-tw*0.5f-iw*0.75f, y+h*0.5f, cpToUTF8(preicon,icon), NULL);
 	}
 
-	nvgFontSize(vg, 20.0f);
+	nvgFontSize(vg, 17.0f);
 	nvgFontFace(vg, "sans-bold");
 	nvgTextAlign(vg,NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
 	nvgFillColor(vg, nvgRGBA(0,0,0,160));
@@ -873,13 +876,15 @@ void drawParagraph(NVGcontext* vg, float x, float y, float width, float height, 
 	float caretx, px;
 	float bounds[4];
 	float a;
+	const char* hoverText = "Hover your mouse over the text to see calculated caret position.";
 	float gx,gy;
 	int gutter = 0;
+	const char* boxText = "Testing\nsome multiline\ntext.";
 	NVG_NOTUSED(height);
 
 	nvgSave(vg);
 
-	nvgFontSize(vg, 18.0f);
+	nvgFontSize(vg, 15.0f);
 	nvgFontFace(vg, "sans");
 	nvgTextAlign(vg, NVG_ALIGN_LEFT|NVG_ALIGN_TOP);
 	nvgTextMetrics(vg, NULL, NULL, &lineh);
@@ -896,7 +901,7 @@ void drawParagraph(NVGcontext* vg, float x, float y, float width, float height, 
 
 			nvgBeginPath(vg);
 			nvgFillColor(vg, nvgRGBA(255,255,255,hit?64:16));
-			nvgRect(vg, x, y, row->width, lineh);
+			nvgRect(vg, x + row->minx, y, row->maxx - row->minx, lineh);
 			nvgFill(vg);
 
 			nvgFillColor(vg, nvgRGBA(255,255,255,255));
@@ -933,7 +938,7 @@ void drawParagraph(NVGcontext* vg, float x, float y, float width, float height, 
 	if (gutter) {
 		char txt[16];
 		snprintf(txt, sizeof(txt), "%d", gutter);
-		nvgFontSize(vg, 13.0f);
+		nvgFontSize(vg, 12.0f);
 		nvgTextAlign(vg, NVG_ALIGN_RIGHT|NVG_ALIGN_MIDDLE);
 
 		nvgTextBounds(vg, gx,gy, txt, NULL, bounds);
@@ -949,16 +954,16 @@ void drawParagraph(NVGcontext* vg, float x, float y, float width, float height, 
 
 	y += 20.0f;
 
-	nvgFontSize(vg, 13.0f);
+	nvgFontSize(vg, 11.0f);
 	nvgTextAlign(vg, NVG_ALIGN_LEFT|NVG_ALIGN_TOP);
 	nvgTextLineHeight(vg, 1.2f);
 
-	nvgTextBoxBounds(vg, x,y, 150, "Hover your mouse over the text to see calculated caret position.", NULL, bounds);
+	nvgTextBoxBounds(vg, x,y, 150, hoverText, NULL, bounds);
 
 	// Fade the tooltip out when close to it.
-	gx = fabsf((mx - (bounds[0]+bounds[2])*0.5f) / (bounds[0] - bounds[2]));
-	gy = fabsf((my - (bounds[1]+bounds[3])*0.5f) / (bounds[1] - bounds[3]));
-	a = maxf(gx, gy) - 0.5f;
+	gx = clampf(mx, bounds[0], bounds[2]) - mx;
+	gy = clampf(my, bounds[1], bounds[3]) - my;
+	a = sqrtf(gx*gx + gy*gy) / 30.0f;
 	a = clampf(a, 0, 1);
 	nvgGlobalAlpha(vg, a);
 
@@ -972,7 +977,7 @@ void drawParagraph(NVGcontext* vg, float x, float y, float width, float height, 
 	nvgFill(vg);
 
 	nvgFillColor(vg, nvgRGBA(0,0,0,220));
-	nvgTextBox(vg, x,y, 150, "Hover your mouse over the text to see calculated caret position.", NULL);
+	nvgTextBox(vg, x,y, 150, hoverText, NULL);
 
 	nvgRestore(vg);
 }
@@ -1064,8 +1069,13 @@ void drawScissor(NVGcontext* vg, float x, float y, float t)
 
 	nvgRestore(vg);
 }
-
-void renderDemo(NVGcontext* vg, float mx, float my, float width, float height,
+void renderDemoScene2(NVGcontext* vg, float mx, float my, float width, float height,
+				float t, int blowup, DemoData* data)
+{
+	drawGraph(vg, 0, height/2, width, height/2, t);
+	drawLines(vg, 120, height - 50, 600, 50, t);
+}
+void renderDemoScene(NVGcontext* vg, float mx, float my, float width, float height,
 				float t, int blowup, DemoData* data)
 {
 	float x,y,popy;
@@ -1076,7 +1086,7 @@ void renderDemo(NVGcontext* vg, float mx, float my, float width, float height,
 	drawColorwheel(vg, width - 300, height - 300, 250.0f, 250.0f, t);
 
 	// Line joints
-	drawLines(vg, 120, height-50, 600, 50, t);
+	drawLines(vg, 120, height - 50, 600, 50, t);
 
 	// Line caps
 	drawWidths(vg, 10, 50, 30);
@@ -1126,7 +1136,33 @@ void renderDemo(NVGcontext* vg, float mx, float my, float width, float height,
 	drawThumbnails(vg, 365, popy-30, 160, 300, data->images, 12, t);
 
 	nvgRestore(vg);
+
+	drawLines(vg, 140, height - 200, width - 160, 120, t);
+
+	drawLines(vg, 40, height - 350, width - 40, 280, t);
+
 }
+
+void renderDemo(NVGcontext* vg, float mx, float my, float width, float height,
+	float t, int blowup, DemoData* data)
+{
+	int cols = 3;
+	int rows = 3;
+	if (!blowup)
+		cols = rows = 1;
+	for (int x = 0; x < cols; x++) {
+		for (int y = 0; y < rows; y++) {
+
+			nvgSave(vg);
+			nvgTranslate(vg, x * width / cols, y * height / rows);
+			nvgScissor(vg, 0, 0, width / cols, height / rows);
+			
+			renderDemoScene(vg, mx, my, width / cols, height / rows, t, blowup, data);
+			nvgRestore(vg);
+		}
+	}
+}
+
 
 #ifndef NANOVG_VULKAN_IMPLEMENTATION
 
