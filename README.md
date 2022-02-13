@@ -50,6 +50,8 @@ glfw used only to get Vulkan surface and Mouse input.
 **Screenshot** of Vulkan version from Linux:
 
 ![nvgvk](https://danilw.github.io/GLSL-howto/nvgvk.png)
+___
+___
 
 *This project is not actively maintained.*
 
