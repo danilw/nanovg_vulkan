@@ -15,7 +15,9 @@ option(BUILD_USE_GLAD "Use glad instead of glew" ON)
 option(BUILD_EXAMPLE_FBO "Build FBO Example (GL3)" OFF)
 option(BUILD_EXAMPLE_GL2 "Build Example using OpenGL2" OFF)
 option(BUILD_EXAMPLE_GL3 "Build Example using OpenGL3" ON)
-option(BUILD_EXAMPLE_VULKAN "Build Example using Vulkan" ON)
+
+option(BUILD_EXAMPLE_VULKAN "Build Example using Vulkan GLFW" ON)
+option(BUILD_EXAMPLE_VULKAN_MIN "Build minimal Example using Vulkan without GLFW" ON)
 
 option(DEMO_ANTIALIAS "Use NVG_ANTIALIAS" ON)
 option(DEMO_MSAA "Use MSAA instead of NVG_ANTIALIAS" OFF)
@@ -60,6 +62,31 @@ if (BUILD_EXAMPLE_VULKAN)
     target_include_directories(example-vk PRIVATE ${COMMON_INCLUDE} ${Vulkan_INCLUDE_DIR})
     target_compile_definitions(example-vk PRIVATE NANOVG_VULKAN_IMPLEMENTATION)
     target_link_libraries(example-vk PRIVATE glfw ${Vulkan_LIBRARY})
+    
+    if (BUILD_EXAMPLE_VULKAN_MIN)
+      add_executable(
+          example-vk_min_no_glfw
+          ${COMMON_SRC}
+          ../src/nanovg_vk.h
+          example_vulkan_min_no_glfw.c
+          vulkan_util.h
+      )
+      
+      if("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
+        add_definitions(-DVK_USE_PLATFORM_WIN32_KHR )
+        target_include_directories(example-vk_min_no_glfw PRIVATE ${COMMON_INCLUDE} ${Vulkan_INCLUDE_DIR})
+        target_compile_definitions(example-vk_min_no_glfw PRIVATE NANOVG_VULKAN_IMPLEMENTATION)
+        target_link_libraries(example-vk_min_no_glfw PRIVATE ${Vulkan_LIBRARY})
+      elseif("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
+        add_definitions(-DVK_USE_PLATFORM_XCB_KHR -O3)
+        target_include_directories(example-vk_min_no_glfw PRIVATE ${COMMON_INCLUDE} ${Vulkan_INCLUDE_DIR})
+        target_compile_definitions(example-vk_min_no_glfw PRIVATE NANOVG_VULKAN_IMPLEMENTATION)
+        target_link_libraries(example-vk_min_no_glfw PRIVATE m xcb ${Vulkan_LIBRARY})
+      else()
+        message(WARNING "Unknown compiler '${CMAKE_C_COMPILER_ID}'!")
+      endif()
+    endif()
+    
 endif()
 
 set(GL_EXAMPLE_SRC
@@ -123,6 +150,7 @@ if (MSVC)
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS )
     set_source_files_properties(
         example_vulkan.c
+        example_vulkan_min_no_glfw.c
         example_gl3.c
         example_gl2.c
         example_fbo.c
@@ -132,7 +160,7 @@ if (MSVC)
     )
     set(BUILD_EXE_POSTFIX "-$<LOWER_CASE:${CMAKE_CXX_COMPILER_ID}-$<CONFIG>>" CACHE STRING "Append to executable name")
 
-    set(ALL_TARGETS example-vk example-gl3 example-gl2)
+    set(ALL_TARGETS example-vk example-vk_min_no_glfw example-gl3 example-gl2)
     foreach(TARGET_NAME ${ALL_TARGETS})
       if (TARGET ${TARGET_NAME})
         set_property(TARGET ${TARGET_NAME} PROPERTY OUTPUT_NAME ${TARGET_NAME}${BUILD_EXE_POSTFIX})

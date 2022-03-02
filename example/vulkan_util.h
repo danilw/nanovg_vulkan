@@ -117,6 +117,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityF
 
 static VkDebugUtilsMessengerEXT debugMessenger = NULL;
 
+#ifdef GLFW_INCLUDE_VULKAN
 static VkInstance createVkInstance(bool enable_debug_layer) {
 
   // initialize the VkApplicationInfo structure
@@ -213,6 +214,7 @@ static VkInstance createVkInstance(bool enable_debug_layer) {
   }
   return inst;
 }
+#endif
 
 static void destroyDebugCallback(VkInstance instance) {
   if (!debugMessenger)
