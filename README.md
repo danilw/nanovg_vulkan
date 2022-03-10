@@ -19,9 +19,9 @@ ___
 
 *Remember NanoVG is not GUI*, and examples about is just examples of this NanoVG integration, not GUI examples.
 
-About RenderPass integration - copy paste code from *integration* examples above after your `vkCmdEndRenderPass` (or before `vkCmdBeginRenderPass`) and everything should work.
+About *RenderPass integration* - copy paste code from *integration* examples above after your `vkCmdEndRenderPass` (or before `vkCmdBeginRenderPass`) and everything should work.
 
-Framebuffer integration, where UI rendered in its own Framebuffer - I did not add example for this case, because it should be obvious - just replace framebuffer RenderPass with RenderPass *integration* examples above(look linked commit).
+*Framebuffer integration*, where UI rendered in its own Framebuffer - I did not add example for this case, because it should be obvious - just replace framebuffer RenderPass with RenderPass *integration* examples above(look linked commit).
 ___
 
 ### 2022 update - thanks to [**@nidefawl**](https://github.com/nidefawl) [pull request](https://github.com/danilw/nanovg_vulkan/pull/5) with lots of changes:
