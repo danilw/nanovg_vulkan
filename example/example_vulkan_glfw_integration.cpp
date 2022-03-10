@@ -1,4 +1,5 @@
 
+// Danil, 2022+
 
 // this code from Vulkan tutorial https://vulkan-tutorial.com/Depth_buffering
 
@@ -7,6 +8,9 @@
 // defined NDEBUG remove if you want debug
 // as image used images/image12.jpg
 // shader path changed files_example_vulkan_glfw_integration/shaders/
+
+// NanoVG related changes marked by block "nanovg Vulkan related functions"
+// also some code changes compare to original, source code edited
 
 #define NDEBUG
 
@@ -35,10 +39,30 @@
 #include <optional>
 #include <set>
 
+
+#ifndef DEMO_ANTIALIAS
+#   define DEMO_ANTIALIAS 1
+#endif
+#ifndef DEMO_STENCIL_STROKES
+#   define DEMO_STENCIL_STROKES 1
+#endif
+#ifndef DEMO_VULKAN_VALIDATON_LAYER
+#   define DEMO_VULKAN_VALIDATON_LAYER 0
+#endif
+
+extern "C"
+{
+#include "nanovg.h"
+#include "nanovg_vk.h"
+
+#include "demo.h"
+#include "perf.h"
+}
+
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
-const int MAX_FRAMES_IN_FLIGHT = 2;
+const int MAX_FRAMES_IN_FLIGHT = 1;
 
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
@@ -208,6 +232,91 @@ private:
     uint32_t currentFrame = 0;
 
     bool framebufferResized = false;
+    double prevt = 0;
+    int blowup = 0;
+
+// ----------- nanovg Vulkan related functions
+
+NVGcontext* vg;
+DemoData data;
+PerfGraph fps;
+
+void prepareNVGFrame(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+
+  VkClearValue clear_values[2];
+  clear_values[0].color.float32[0] = 0.3f;
+  clear_values[0].color.float32[1] = 0.3f;
+  clear_values[0].color.float32[2] = 0.32f;
+  clear_values[0].color.float32[3] = 1.0f;
+  clear_values[1].depthStencil.depth = 1.0f;
+  clear_values[1].depthStencil.stencil = 0;
+
+  VkRenderPassBeginInfo rp_begin;
+  rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+  rp_begin.pNext = NULL;
+  rp_begin.renderPass = renderPass;
+  rp_begin.framebuffer = swapChainFramebuffers[imageIndex];
+  rp_begin.renderArea.offset.x = 0;
+  rp_begin.renderArea.offset.y = 0;
+  rp_begin.renderArea.extent = swapChainExtent;
+  rp_begin.clearValueCount = 2;
+  rp_begin.pClearValues = clear_values;
+
+  vkCmdBeginRenderPass(commandBuffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+
+  VkViewport viewport;
+  viewport.width = (float) swapChainExtent.width;
+  viewport.height = (float) swapChainExtent.height;
+  viewport.minDepth = (float) 0.0f;
+  viewport.maxDepth = (float) 1.0f;
+  viewport.x = (float) rp_begin.renderArea.offset.x;
+  viewport.y = (float) rp_begin.renderArea.offset.y;
+  vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+  VkRect2D scissor = rp_begin.renderArea;
+  vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+}
+
+void submitNVGFrame(VkCommandBuffer commandBuffer) {
+  vkCmdEndRenderPass(commandBuffer);
+}
+
+void init_nanovg_vulkan(VkCommandBuffer commandBuffer, NVGcontext **vg, PerfGraph *fps, DemoData *data){
+  VKNVGCreateInfo create_info = {0};
+  create_info.device = device;
+  create_info.gpu = physicalDevice;
+  create_info.renderpass = renderPass;
+  create_info.cmdBuffer = commandBuffer;
+
+  int flags = 0;
+#ifndef NDEBUG
+  flags |= NVG_DEBUG; // unused in nanovg_vk
+#endif
+#if DEMO_ANTIALIAS
+  flags |= NVG_ANTIALIAS;
+#endif
+#if DEMO_STENCIL_STROKES
+  flags |= NVG_STENCIL_STROKES;
+#endif
+
+  *vg = nvgCreateVk(create_info, flags, graphicsQueue);
+
+  if (loadDemoData(*vg, data) == -1)
+      exit(-1);
+
+  initGraph(fps, GRAPH_RENDER_FPS, "Frame Time");
+}
+
+    static void key(GLFWwindow *window, int key, int scancode, int action, int mods) {
+      if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+      if (key == GLFW_KEY_SPACE && action == GLFW_PRESS){
+        auto app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
+        app->blowup = !app->blowup;
+      }
+    }
+
+// -----end of nanovg Vulkan related functions
 
     void initWindow() {
         glfwInit();
@@ -217,6 +326,9 @@ private:
         window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
         glfwSetWindowUserPointer(window, this);
         glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
+        glfwSetKeyCallback(window, key);
+        glfwSetTime(0);
+        prevt = glfwGetTime();
     }
 
     static void framebufferResizeCallback(GLFWwindow* window, int width, int height) {
@@ -248,6 +360,9 @@ private:
         createDescriptorSets();
         createCommandBuffers();
         createSyncObjects();
+// ----------- nanovg Vulkan related functions
+        init_nanovg_vulkan(commandBuffers[currentFrame], &vg, &fps, &data);
+// -----end of nanovg Vulkan related functions
     }
 
     void mainLoop() {
@@ -280,6 +395,10 @@ private:
     }
 
     void cleanup() {
+// ----------- nanovg Vulkan related functions
+        freeDemoData(vg, &data);
+        nvgDeleteVk(vg);
+// -----end of nanovg Vulkan related functions
         cleanupSwapChain();
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -423,7 +542,9 @@ private:
         for (const auto& device : devices) {
             if (isDeviceSuitable(device)) {
                 physicalDevice = device;
-                break;
+                VkPhysicalDeviceProperties pr;
+                vkGetPhysicalDeviceProperties(physicalDevice, &pr);
+                if(pr.deviceType==VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)break;
             }
         }
 
@@ -498,7 +619,7 @@ private:
         createInfo.imageColorSpace = surfaceFormat.colorSpace;
         createInfo.imageExtent = extent;
         createInfo.imageArrayLayers = 1;
-        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
         QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
         uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
@@ -540,19 +661,19 @@ private:
         VkAttachmentDescription colorAttachment{};
         colorAttachment.format = swapChainImageFormat;
         colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
         colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         VkAttachmentDescription depthAttachment{};
         depthAttachment.format = findDepthFormat();
         depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
         depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -808,7 +929,7 @@ private:
 
     VkFormat findDepthFormat() {
         return findSupportedFormat(
-        {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+        {VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
             VK_IMAGE_TILING_OPTIMAL,
             VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
         );
@@ -1220,6 +1341,88 @@ private:
             throw std::runtime_error("failed to begin recording command buffer!");
         }
 
+{
+  VkImageMemoryBarrier image_barrier = {
+    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+    .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+    .dstAccessMask = 0,
+    .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .image = swapChainImages[imageIndex],
+    .subresourceRange = {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 1,
+    },
+  };
+  vkCmdPipelineBarrier(commandBuffer,
+    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+    0,
+    0, NULL,
+    0, NULL,
+    1, &image_barrier);
+}
+  VkClearColorValue clear_values = { 0.0, 0.0, 0.0, 0.0 };
+  VkImageSubresourceRange ImageSubresourceRange;
+  ImageSubresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+  ImageSubresourceRange.baseMipLevel   = 0;
+  ImageSubresourceRange.levelCount     = 1;
+  ImageSubresourceRange.baseArrayLayer = 0;
+  ImageSubresourceRange.layerCount     = 1;
+  vkCmdClearColorImage(commandBuffer,swapChainImages[imageIndex],VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,&clear_values,1,&ImageSubresourceRange);
+{
+  VkImageMemoryBarrier image_barrier = {
+    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+    .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+    .dstAccessMask = 0,
+    .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    .image = swapChainImages[imageIndex],
+    .subresourceRange = {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 1,
+    },
+    };
+  vkCmdPipelineBarrier(commandBuffer,
+    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+    0,
+    0, NULL,
+    0, NULL,
+    1, &image_barrier);
+      
+}
+
+// ----------- nanovg Vulkan related functions
+        int winWidth, winHeight;
+        glfwGetWindowSize(window, &winWidth, &winHeight);
+        prepareNVGFrame(commandBuffer, imageIndex);
+        double t = glfwGetTime();
+        double dt = t - prevt;
+        prevt = t;
+        updateGraph(&fps, dt);
+        float pxRatio = swapChainExtent.width / (float)winWidth;
+
+        double mx, my;
+        glfwGetCursorPos(window, &mx, &my);
+        nvgBeginFrame(vg, (float)winWidth, (float)winHeight, pxRatio);
+        renderDemo(vg, (float)mx, (float)my, (float)winWidth, (float)winHeight, (float)t, (int)(blowup), &data);
+        renderGraph(vg, 5, 5, &fps);
+
+        nvgEndFrame(vg);
+        submitNVGFrame(commandBuffer);
+// -----end of nanovg Vulkan related functions
+
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = renderPass;
@@ -1249,6 +1452,33 @@ private:
             vkCmdDrawIndexed(commandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 
         vkCmdEndRenderPass(commandBuffer);
+        
+{
+  VkImageMemoryBarrier image_barrier = {
+      .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+      .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+      .dstAccessMask = 0,
+      .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+      .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+      .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .image = swapChainImages[imageIndex],
+      .subresourceRange = {
+          .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+          .baseMipLevel = 0,
+          .levelCount = 1,
+          .baseArrayLayer = 0,
+          .layerCount = 1,
+      },
+  };
+  vkCmdPipelineBarrier(commandBuffer,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+            0,
+            0, NULL,
+            0, NULL,
+            1, &image_barrier);
+}
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to record command buffer!");
