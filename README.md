@@ -15,7 +15,7 @@ ___
 
 **[nanovg-vulkan-min-integration-demo](https://github.com/danilw/nanovg-vulkan-min-integration-demo)** - repository with minimal RenderPass integration example. Not using any libraries, no GLFW, only NanoVG code and C. Look description and screenshot on link.
 
-**example_vulkan_glfw_integration.cpp** - this is example code from [Vulkan-tutorial Depth buffering](https://vulkan-tutorial.com/Depth_buffering) modified adding NanoVG integration. Look **[this commit]()** to see code changes from original C++ tutorial code.
+**example_vulkan_glfw_integration.cpp** - this is example code from [Vulkan-tutorial Depth buffering](https://vulkan-tutorial.com/Depth_buffering) modified adding NanoVG integration. **Look at [this commit 6703797](https://github.com/danilw/nanovg_vulkan/commit/67037973ee7167977121cd7dea589ace67136141) to see code changes from original C++ tutorial code**.
 ___
 
 ### 2022 update - thanks to [**@nidefawl**](https://github.com/nidefawl) [pull request](https://github.com/danilw/nanovg_vulkan/pull/5) with lots of changes:
