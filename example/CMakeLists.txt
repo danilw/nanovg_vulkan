@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.1)
 
 project(nanovg_example)
 
+set(CMAKE_CXX_STANDARD 20)
+
 set (BUILD_SHARED_LIBS OFF)
 set( GLFW_BUILD_DOCS OFF CACHE BOOL ""  )
 set( GLFW_BUILD_TESTS OFF CACHE BOOL ""  )
@@ -104,7 +106,8 @@ if (BUILD_EXAMPLE_VULKAN)
       target_include_directories(example-vk_glfw_integration PRIVATE ${COMMON_INCLUDE} ${VK_TUT_INCLUDE} ${Vulkan_INCLUDE_DIR})
       target_compile_definitions(example-vk_glfw_integration PRIVATE NANOVG_VULKAN_IMPLEMENTATION)
       target_link_libraries(example-vk_glfw_integration PRIVATE glfw ${Vulkan_LIBRARY})
-      
+      # let Visual Studio debugger find the shader files
+      set_target_properties(example-vk_glfw_integration PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
     endif()
     
 endif()
