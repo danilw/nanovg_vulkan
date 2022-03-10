@@ -1797,12 +1797,17 @@ void init_nanovg_vulkan(VkCommandBuffer commandBuffer, NVGcontext **vg, PerfGrap
 int main() {
     HelloTriangleApplication app;
 
+#if defined(_DEBUG) && defined(_MSC_VER)
+    // keep exceptions for Visual Studio debugger
+    app.run();
+#else
     try {
         app.run();
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;
     }
+#endif
 
     return EXIT_SUCCESS;
 }
