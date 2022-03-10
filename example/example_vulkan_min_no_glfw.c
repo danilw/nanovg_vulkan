@@ -1,4 +1,4 @@
-// Danil, 2022+
+// Danil, 2022+ https://github.com/danilw/nanovg_vulkan
 
 // this is Nanovg demo without using any libraries (no GLFW)
 // scroll to <main> functions to see implementation 
