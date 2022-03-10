@@ -437,7 +437,11 @@ static VKNVGBuffer vknvg_createBuffer(VkDevice device, VkPhysicalDeviceMemoryPro
 
   VkBuffer buffer;
   NVGVK_CHECK_RESULT(vkCreateBuffer(device, &buf_createInfo, allocator, &buffer));
+#ifdef __cplusplus
+  VkMemoryRequirements mem_reqs = {};
+#else
   VkMemoryRequirements mem_reqs = {0};
+#endif
   vkGetBufferMemoryRequirements(device, buffer, &mem_reqs);
 
   uint32_t memoryTypeIndex;
@@ -513,7 +517,11 @@ static VkBlendFactor vknvg_NVGblendFactorToVkBlendFactor(enum NVGblendFactor fac
 }
 
 static VkPipelineColorBlendAttachmentState vknvg_compositOperationToColorBlendAttachmentState(NVGcompositeOperationState compositeOperation) {
+#ifdef __cplusplus
+  VkPipelineColorBlendAttachmentState state = {};
+#else
   VkPipelineColorBlendAttachmentState state = {0};
+#endif
   state.blendEnable = VK_TRUE;
   state.colorBlendOp = VK_BLEND_OP_ADD;
   state.alphaBlendOp = VK_BLEND_OP_ADD;
@@ -688,14 +696,21 @@ static VKNVGPipeline *vknvg_createPipeline(VKNVGcontext *vk, VKNVGCreatePipeline
   VkShaderModule vert_shader = vk->fillVertShader;
   VkShaderModule frag_shader = vk->fillFragShader;
   VkShaderModule frag_shader_aa = vk->fillFragShaderAA;
-
+#ifdef __cplusplus
+  VkVertexInputBindingDescription vi_bindings[1] = {{}};
+#else
   VkVertexInputBindingDescription vi_bindings[1] = {{0}};
+#endif
   vi_bindings[0].binding = 0;
   vi_bindings[0].stride = sizeof(NVGvertex);
   vi_bindings[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
   VkVertexInputAttributeDescription vi_attrs[2] = {
+#ifdef __cplusplus
+      {},
+#else
       {0},
+#endif
   };
   vi_attrs[0].binding = 0;
   vi_attrs[0].location = 0;
@@ -828,13 +843,21 @@ static int vknvg_UpdateTexture(VkDevice device, VKNVGtexture *tex, int dx, int d
 
 // call it after vknvg_UpdateTexture
 static void vknvg_InitTexture(VkCommandBuffer cmdbuffer, VkQueue queue, VKNVGtexture *tex) {
+#ifdef __cplusplus
+    VkCommandBufferBeginInfo beginInfo = {};
+#else
     VkCommandBufferBeginInfo beginInfo = {0};
+#endif
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     vkBeginCommandBuffer( cmdbuffer, &beginInfo );
-
+    
+#ifdef __cplusplus
+    VkImageMemoryBarrier layoutTransitionBarrier = {};
+#else
     VkImageMemoryBarrier layoutTransitionBarrier = {0};
+#endif
     layoutTransitionBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     layoutTransitionBarrier.srcAccessMask = 0;
     layoutTransitionBarrier.dstAccessMask = 0;
@@ -857,7 +880,11 @@ static void vknvg_InitTexture(VkCommandBuffer cmdbuffer, VkQueue queue, VKNVGtex
     vkEndCommandBuffer( cmdbuffer );
 
     VkPipelineStageFlags waitStageMash[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+#ifdef __cplusplus
+    VkSubmitInfo submitInfo = {};
+#else
     VkSubmitInfo submitInfo = {0};
+#endif
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.waitSemaphoreCount = 0;
     submitInfo.pWaitSemaphores = NULL;
@@ -971,7 +998,11 @@ static void vknvg_setUniforms(VKNVGcontext *vk, VkDescriptorSet descSet, int uni
 
   VkWriteDescriptorSet writes[3] = {{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET}, {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET}, {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET}};
 
+#ifdef __cplusplus
+  VkDescriptorBufferInfo vertUniformBufferInfo = {};
+#else
   VkDescriptorBufferInfo vertUniformBufferInfo = {0};
+#endif
   vertUniformBufferInfo.buffer = vk->vertUniformBuffer.buffer;
   vertUniformBufferInfo.offset = 0;
   vertUniformBufferInfo.range = sizeof(vk->view);
@@ -983,7 +1014,11 @@ static void vknvg_setUniforms(VKNVGcontext *vk, VkDescriptorSet descSet, int uni
   writes[0].dstArrayElement = 0;
   writes[0].dstBinding = 0;
 
+#ifdef __cplusplus
+  VkDescriptorBufferInfo uniform_buffer_info = {};
+#else
   VkDescriptorBufferInfo uniform_buffer_info = {0};
+#endif
   uniform_buffer_info.buffer = vk->fragUniformBuffer.buffer;
   uniform_buffer_info.offset = uniformOffset;
   uniform_buffer_info.range = sizeof(VKNVGfragUniforms);
@@ -1023,7 +1058,11 @@ static void vknvg_fill(VKNVGcontext *vk, VKNVGcall *call) {
   VkDevice device = vk->createInfo.device;
   VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer;
 
+#ifdef __cplusplus
+  VKNVGCreatePipelineKey pipelinekey = {};
+#else
   VKNVGCreatePipelineKey pipelinekey = {0};
+#endif
   pipelinekey.compositOperation = call->compositOperation;
 #ifndef USE_TOPOLOGY_TRIANGLE_FAN
   pipelinekey.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -1088,8 +1127,12 @@ static void vknvg_convexFill(VKNVGcontext *vk, VKNVGcall *call) {
 
   VkDevice device = vk->createInfo.device;
   VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer;
-
+  
+#ifdef __cplusplus
+  VKNVGCreatePipelineKey pipelinekey = {};
+#else
   VKNVGCreatePipelineKey pipelinekey = {0};
+#endif
   pipelinekey.compositOperation = call->compositOperation;
 #ifndef USE_TOPOLOGY_TRIANGLE_FAN
   pipelinekey.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -1147,7 +1190,11 @@ static void vknvg_stroke(VKNVGcontext *vk, VKNVGcall *call) {
     vknvg_setUniforms(vk, descSetAA, call->uniformOffset, call->image);
     vknvg_setUniforms(vk, descSetBase, call->uniformOffset + vk->fragSize, call->image);
 
+#ifdef __cplusplus
+    VKNVGCreatePipelineKey pipelinekey = {};
+#else
     VKNVGCreatePipelineKey pipelinekey = {0};
+#endif
     pipelinekey.compositOperation = call->compositOperation;
     pipelinekey.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
@@ -1189,7 +1236,12 @@ static void vknvg_stroke(VKNVGcontext *vk, VKNVGcall *call) {
      }
   } else {
 
+#ifdef __cplusplus
+    VKNVGCreatePipelineKey pipelinekey = {};
+#else
     VKNVGCreatePipelineKey pipelinekey = {0};
+#endif
+
     pipelinekey.compositOperation = call->compositOperation;
     pipelinekey.stencilFill = false;
     pipelinekey.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
@@ -1220,7 +1272,11 @@ static void vknvg_triangles(VKNVGcontext *vk, VKNVGcall *call) {
   VkDevice device = vk->createInfo.device;
   VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer;
 
+#ifdef __cplusplus
+  VKNVGCreatePipelineKey pipelinekey = {};
+#else
   VKNVGCreatePipelineKey pipelinekey = {0};
+#endif
   pipelinekey.compositOperation = call->compositOperation;
   pipelinekey.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
   pipelinekey.stencilFill = false;
