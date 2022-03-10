@@ -7,7 +7,7 @@ ___
 
 ### 2022 update 2 - few people ask me for more examples, so I added more examples:
 
-**Warning** - for now only one *frame in flight* supported. Il update examples and nanovg library latter to add missing support.
+*Warning* - for now only one *frame in flight* supported. Il update examples and nanovg library latter to add missing support.
 
 **example_vulkan.c** - minimal NanoVG example that use GLFW.
 
