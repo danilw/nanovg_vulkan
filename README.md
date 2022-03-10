@@ -5,20 +5,20 @@ added vulkan build, and cmake files, removed premake4.lua
 ### Contact: [**Join discord server**](https://discord.gg/JKyqWgt)
 ___
 
-**2022 update 2** - few people ask me for more examples, so I added more examples:
+### 2022 update 2 - few people ask me for more examples, so I added more examples:
 
-*Warning - for now only one "frame in flight" supported*. Il update examples and nanovg library latter to add missing support.
+**Warning** - for now only one *frame in flight* supported. Il update examples and nanovg library latter to add missing support.
 
-`example_vulkan.c` - minimal NanoVG example that use GLFW.
+**example_vulkan.c** - minimal NanoVG example that use GLFW.
 
-`example_vulkan_min_no_glfw.c` - same as above but not using GLFW, supported Linux and Windows.
+**example_vulkan_min_no_glfw.c** - same as above but not using GLFW, supported Linux and Windows.
 
-[nanovg-vulkan-min-integration-demo](https://github.com/danilw/nanovg-vulkan-min-integration-demo) - repository with minimal RenderPass integration example. Not using any libraries, no GLFW, only NanoVG code and C.
+**[nanovg-vulkan-min-integration-demo](https://github.com/danilw/nanovg-vulkan-min-integration-demo)** - repository with minimal RenderPass integration example. Not using any libraries, no GLFW, only NanoVG code and C. Look description and screenshot on link.
 
-`example_vulkan_glfw_integration.cpp` - this is example code from [Vulkan-tutorial Depth buffering](https://vulkan-tutorial.com/Depth_buffering) modified adding NanoVG integration. Look this commit to see code changes from original C++ tutorial code.
+**example_vulkan_glfw_integration.cpp** - this is example code from [Vulkan-tutorial Depth buffering](https://vulkan-tutorial.com/Depth_buffering) modified adding NanoVG integration. Look **[this commit]()** to see code changes from original C++ tutorial code.
 ___
 
-**2022 update** - thanks to [**@nidefawl**](https://github.com/nidefawl) [pull request](https://github.com/danilw/nanovg_vulkan/pull/5) with lots of changes:
+### 2022 update - thanks to [**@nidefawl**](https://github.com/nidefawl) [pull request](https://github.com/danilw/nanovg_vulkan/pull/5) with lots of changes:
 
 In this PR:
 1. Merge latest nanovg
@@ -36,7 +36,7 @@ I wanted to also use enums for the fill-path (nvgFill) to make the code cleaner,
 6. Spacebar renders the demo multiple times to add some 'load' when comparing performance
 ___
 
-**2021 update** - fixed all errors, this code has no Validation errors and work correctly everywhere.
+### 2021 update - fixed all errors, this code has no Validation errors and work correctly everywhere.
 
 Thanks to [**@fzwoch**](https://github.com/fzwoch) [commits](https://github.com/danilw/nanovg_vulkan/pull/1) **by default used `TOPOLOGY_TRIANGLE_LIST`**, because `TOPOLOGY_TRIANGLE_FAN` is optional in Vulkan. 
 
