@@ -5,7 +5,7 @@ added vulkan build, and cmake files, removed premake4.lua
 ### Contact: [**Join discord server**](https://discord.gg/JKyqWgt)
 ___
 
-To launch - copy builded binary to *example* folder(or launch when this folder is current as on build example commands below). Bbecause required fonts and images/shaders to load.
+To launch - copy builded binary to *example* folder(or launch when this folder is current as on build example commands below). Because required fonts and images/shaders to load.
 
 ### 2022 update 2 - few people ask me for more examples, so I added more examples:
 
