@@ -1372,7 +1372,7 @@ void init_nanovg_vulkan(VkCommandBuffer commandBuffer, NVGcontext **vg, PerfGrap
     0, NULL,
     1, &image_barrier);
 }
-  VkClearColorValue clear_values = { 0.0, 0.0, 0.0, 0.0 };
+  VkClearColorValue clear_values = { 0.3f, 0.3f, 0.32f, 1.0 };
   VkImageSubresourceRange ImageSubresourceRange;
   ImageSubresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
   ImageSubresourceRange.baseMipLevel   = 0;
