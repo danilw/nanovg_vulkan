@@ -5,6 +5,8 @@ added vulkan build, and cmake files, removed premake4.lua
 ### Contact: [**Join discord server**](https://discord.gg/JKyqWgt)
 ___
 
+To launch - copy builded binary to *example* folder(or launch when this folder is current as on build example commands below). Bbecause required fonts and images/shaders to load.
+
 ### 2022 update 2 - few people ask me for more examples, so I added more examples:
 
 *Warning* - for now only one *frame in flight* supported. Il update examples and nanovg library latter to add missing support.
@@ -21,7 +23,7 @@ ___
 
 About *RenderPass integration* - copy paste code from *integration* examples above after your `vkCmdEndRenderPass` (or before `vkCmdBeginRenderPass`) and everything should work.
 
-*Framebuffer integration*, where UI rendered in its own Framebuffer - I did not add example for this case, because it should be obvious - just replace framebuffer RenderPass with RenderPass *integration* examples above(look linked commit).
+*Framebuffer integration*, where UI rendered in its own Framebuffer - I did not add example for this case, because it should be obvious - just replace framebuffer RenderPass with RenderPass of NanoVG *integration* examples above(look linked commit).
 ___
 
 ### 2022 update - thanks to [**@nidefawl**](https://github.com/nidefawl) [pull request](https://github.com/danilw/nanovg_vulkan/pull/5) with lots of changes:
@@ -62,6 +64,8 @@ cmake ../
 make
 cd ../
 ./build/example-vk
+./build/example-vk_glfw_integration
+./build/example-vk_min_no_glfw
 ```
 
 glfw used only to get Vulkan surface and Mouse input.
