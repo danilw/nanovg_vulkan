@@ -234,6 +234,7 @@ private:
     bool framebufferResized = false;
     double prevt = 0;
     int blowup = 0;
+    int hidenvg = 0;
 
 // ----------- nanovg Vulkan related functions
 
@@ -313,6 +314,10 @@ void init_nanovg_vulkan(VkCommandBuffer commandBuffer, NVGcontext **vg, PerfGrap
       if (key == GLFW_KEY_SPACE && action == GLFW_PRESS){
         auto app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
         app->blowup = !app->blowup;
+      }
+      if (key == GLFW_KEY_3 && action == GLFW_PRESS){
+        auto app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
+        app->hidenvg = !app->hidenvg;
       }
     }
 
@@ -1403,6 +1408,8 @@ void init_nanovg_vulkan(VkCommandBuffer commandBuffer, NVGcontext **vg, PerfGrap
       
 }
 
+if(!hidenvg)
+{
 // ----------- nanovg Vulkan related functions
         int winWidth, winHeight;
         glfwGetWindowSize(window, &winWidth, &winHeight);
@@ -1422,7 +1429,7 @@ void init_nanovg_vulkan(VkCommandBuffer commandBuffer, NVGcontext **vg, PerfGrap
         nvgEndFrame(vg);
         submitNVGFrame(commandBuffer);
 // -----end of nanovg Vulkan related functions
-
+}
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = renderPass;
@@ -1604,7 +1611,7 @@ void init_nanovg_vulkan(VkCommandBuffer commandBuffer, NVGcontext **vg, PerfGrap
 
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
         for (const auto& availableFormat : availableFormats) {
-            if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+            if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
                 return availableFormat;
             }
         }
