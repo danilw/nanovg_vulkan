@@ -2,10 +2,13 @@ added vulkan build, and cmake files, removed premake4.lua
 
 **Why I made this** - I made it as a "test task for Vulkan related job" a year ago, for me this project has no real use. I would recommend for everyone use [**imgui**](https://github.com/ocornut/imgui) if you look for production-ready Vulkan UI. I will not support or update this project at all, the last update was just to fix bugs and Validation errors.
 
+**Description** - nanovg in C, no external dependencies. C++ code in this repository come because of one C++ example.
+
 ### Contact: [**Join discord server**](https://discord.gg/JKyqWgt)
 ___
 
 To launch - copy builded binary to *example* folder(or launch when this folder is current as on build example commands below). Because required fonts and images/shaders to load.
+___
 
 ### 2022 update 2 - few people ask me for more examples, so I added more examples:
 
