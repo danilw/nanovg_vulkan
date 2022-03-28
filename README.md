@@ -2,7 +2,7 @@ added vulkan build, and cmake files, removed premake4.lua
 
 **Why I made this** - I made it as a "test task for Vulkan related job" a year ago, for me this project has no real use. I would recommend for everyone use [**imgui**](https://github.com/ocornut/imgui) if you look for production-ready Vulkan UI. I will not support or update this project at all, the last update was just to fix bugs and Validation errors.
 
-**Description** - nanovg in C, no external dependencies. C++ code in this repository come because of one C++ example.
+**Description** - nanovg in C, no external dependencies. GLFW used only by few examples(look example description, there is example without using GLFW), and C++ code in this repository come because of one C++ example.
 
 ### Contact: [**Join discord server**](https://discord.gg/JKyqWgt)
 ___
