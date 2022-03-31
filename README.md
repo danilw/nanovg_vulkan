@@ -26,7 +26,7 @@ cd ../
 ./build/example-vk_min_no_glfw
 ```
 
-Look *Examples description* below there link to *C only minimal example* not using any library.
+Look *Examples description* below there link to repository with *C only minimal example* without dependencies not using any library.
 
 **MoltenVK note** - after `TOPOLOGY_TRIANGLE_LIST` update(look below) this Vulkan port does work on MoltenVK(Mac/etc) but I dont have it to test so you should make cmake config to build it and launch by yourself.
 ___
