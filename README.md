@@ -26,10 +26,12 @@ cd ../
 ./build/example-vk_min_no_glfw
 ```
 
+Look *Examples description* below there link to *C only minimal example* not using any library.
+
 **MoltenVK note** - after `TOPOLOGY_TRIANGLE_LIST` update(look below) this Vulkan port does work on MoltenVK(Mac/etc) but I dont have it to test so you should make cmake config to build it and launch by yourself.
 ___
 
-### 2022 update 2 - few people ask me for more examples, so I added more examples:
+# Examples description:
 
 *Warning* - for now only one *frame in flight* supported. Il update examples and nanovg library latter to add missing support.
 
@@ -46,6 +48,9 @@ ___
 About *RenderPass integration* - copy paste code from *integration* examples above after your `vkCmdEndRenderPass` (or before `vkCmdBeginRenderPass`) and everything should work.
 
 *Framebuffer integration*, where UI rendered in its own Framebuffer - I did not add example for this case, because it should be obvious - just replace framebuffer RenderPass with RenderPass of NanoVG *integration* examples above(look linked commit).
+___
+
+### 2022 update 2 - few people ask me for more examples, so I added more examples.
 ___
 
 ### 2022 update - thanks to [**@nidefawl**](https://github.com/nidefawl) [pull request](https://github.com/danilw/nanovg_vulkan/pull/5) with lots of changes:
