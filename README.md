@@ -22,7 +22,6 @@ cmake ../
 make
 cd ../
 ./build/example-vk
-./build/example-vk_glfw_integration
 ./build/example-vk_min_no_glfw
 ```
 
@@ -39,9 +38,11 @@ ___
 
 **example_vulkan_min_no_glfw.c** - same as above but not using GLFW, supported Linux and Windows.
 
+### Two external examples:
+
 **[nanovg-vulkan-min-integration-demo](https://github.com/danilw/nanovg-vulkan-min-integration-demo)** - repository with minimal RenderPass integration example. Not using any libraries, no GLFW, only NanoVG code and C. **Look description and screenshot on link**.
 
-**example_vulkan_glfw_integration.cpp** - this is example code from [Vulkan-tutorial Depth buffering](https://vulkan-tutorial.com/Depth_buffering) modified adding NanoVG integration. **Look at [this commit 6703797](https://github.com/danilw/nanovg_vulkan/commit/67037973ee7167977121cd7dea589ace67136141) to see code changes from original C++ tutorial code**. [Screenshot](https://danilw.github.io/GLSL-howto/vulkan_sh_launcher/nvg_integr_cpp.png), hotkey 3 to show/hide nanovg for example.
+**[nanovg-vulkan-glfw-integration-demo](https://github.com/danilw/nanovg-vulkan-glfw-integration-demo)** - repository with example from Vulkan-tutorial Depth buffering modified adding NanoVG integration. Using C++ and GLFW.
 
 *Remember NanoVG is not GUI*, and examples about is just examples of this NanoVG integration, not GUI examples.
 
