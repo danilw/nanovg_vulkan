@@ -32,7 +32,8 @@ ___
 
 # Examples description:
 
-*Multiple frames in flight* - only ***nanovg-vulkan-glfw-integration-demo***(link below) has example of using multiple frames in flight. Everything else use single frame, *this is reason of low FPS compare to OpenGL* (look [this my comment](https://github.com/memononen/nanovg/issues/614#issuecomment-1102528085) there screenshots Vulkan to OpenGL).
+*Multiple frames in flight* - only ***nanovg-vulkan-glfw-integration-demo***(link below) has example of using multiple frames in flight.\
+Every other example use single frame, *this is reason of low FPS compare to OpenGL* (look [this my comment](https://github.com/memononen/nanovg/issues/614#issuecomment-1102528085) there screenshots Vulkan to OpenGL).
 ___
 
 **example_vulkan.c** - minimal NanoVG example that use GLFW.
