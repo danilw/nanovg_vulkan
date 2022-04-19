@@ -32,7 +32,9 @@ ___
 
 # Examples description:
 
-*Warning* - for now only one *frame in flight* supported. Il update examples and nanovg library latter to add missing support.
+MAX_FRAMES_IN_FLIGHT
+
+*Multiple frames in flight* - only ***nanovg-vulkan-glfw-integration-demo***(link below) has example of using multiple frames in flight. Everything else use single frame, *this is reason of low FPS compare to OpenGL*.
 
 **example_vulkan.c** - minimal NanoVG example that use GLFW.
 
