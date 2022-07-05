@@ -539,7 +539,7 @@ FrameBuffers createFrameBuffers(const VulkanDevice *device, VkSurfaceKHR surface
   // width and height are either both -1, or both not -1.
   if (surfCapabilities.currentExtent.width == (uint32_t)-1) {
     buffer_size.width = winWidth;
-    buffer_size.width = winHeight;
+    buffer_size.height = winHeight;
   } else {
     // If the surface size is defined, the swap chain size must match
     buffer_size = surfCapabilities.currentExtent;
