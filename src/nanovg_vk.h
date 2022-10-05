@@ -1448,7 +1448,7 @@ static int vknvg_renderCreateTexture(void *uptr, int type, int w, int h, int ima
     uint8_t *generated_texture = (uint8_t*)malloc(texture_size);
     for (uint32_t i = 0; i < (uint32_t) w; ++i){
         for (uint32_t j = 0; j < (uint32_t) h; ++j){
-            size_t pixel = (i * w + j) * tx_format * sizeof(uint8_t);
+            size_t pixel = (i + j * w) * tx_format * sizeof(uint8_t);
             if (type == NVG_TEXTURE_RGBA) {
               generated_texture[pixel + 0] = 0x00;
               generated_texture[pixel + 1] = 0x00;
