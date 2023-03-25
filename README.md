@@ -10,6 +10,16 @@ ___
 To launch - copy builded binary to *example* folder(or launch when this folder is current as on build example commands below). Because required fonts and images/shaders to load.
 ___
 
+
+
+### Known bugs-related info:
+
+- **Bug** - **DPI scale is broken** when it `!=1`, I know source of problem and will fix soon. Currectly - DPI scale set to 1 always. Read https://github.com/danilw/nanovg-vulkan-glfw-integration-demo/issues/1 
+- Fix what Cppcheck pointing, unused variables etc, not bugs.
+- Performance not optimized - read [**discussion there**](https://github.com/memononen/nanovg/issues/614)
+
+___
+
 # Build:
 (use cmake to build on Windows, Windows/Linux supported and tested)
 
