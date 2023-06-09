@@ -160,7 +160,7 @@ void init_win_params(struct app_os_window *os_window)
 
 bool resize_event = false;
 
-void prepareFrame(VkDevice device, VkCommandBuffer cmd_buffer, FrameBuffers *fb) {
+void prepareFrame(VkDevice device, VkCommandBuffer *cmd_buffer, FrameBuffers *fb) {
   VkResult res;
 
   // Get the index of the next available swapchain image:
@@ -177,7 +177,7 @@ void prepareFrame(VkDevice device, VkCommandBuffer cmd_buffer, FrameBuffers *fb)
   assert(res == VK_SUCCESS);
 
   const VkCommandBufferBeginInfo cmd_buf_info = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-  res = vkBeginCommandBuffer(cmd_buffer, &cmd_buf_info);
+  res = vkBeginCommandBuffer(cmd_buffer[fb->current_buffer], &cmd_buf_info);
   assert(res == VK_SUCCESS);
 
   VkClearValue clear_values[2];
@@ -200,7 +200,7 @@ void prepareFrame(VkDevice device, VkCommandBuffer cmd_buffer, FrameBuffers *fb)
   rp_begin.clearValueCount = 2;
   rp_begin.pClearValues = clear_values;
 
-  vkCmdBeginRenderPass(cmd_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+  vkCmdBeginRenderPass(cmd_buffer[fb->current_buffer], &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
   VkViewport viewport;
   viewport.width = (float) fb->buffer_size.width;
@@ -209,16 +209,16 @@ void prepareFrame(VkDevice device, VkCommandBuffer cmd_buffer, FrameBuffers *fb)
   viewport.maxDepth = (float) 1.0f;
   viewport.x = (float) rp_begin.renderArea.offset.x;
   viewport.y = (float) rp_begin.renderArea.offset.y;
-  vkCmdSetViewport(cmd_buffer, 0, 1, &viewport);
+  vkCmdSetViewport(cmd_buffer[fb->current_buffer], 0, 1, &viewport);
 
   VkRect2D scissor = rp_begin.renderArea;
-  vkCmdSetScissor(cmd_buffer, 0, 1, &scissor);
+  vkCmdSetScissor(cmd_buffer[fb->current_buffer], 0, 1, &scissor);
 }
 
-void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer cmd_buffer, FrameBuffers *fb) {
+void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, FrameBuffers *fb) {
   VkResult res;
 
-  vkCmdEndRenderPass(cmd_buffer);
+  vkCmdEndRenderPass(cmd_buffer[fb->current_buffer]);
 
   VkImageMemoryBarrier image_barrier = {
       .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -237,7 +237,7 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer cmd_buffer, Fra
           .layerCount = 1,
       },
   };
-  vkCmdPipelineBarrier(cmd_buffer,
+  vkCmdPipelineBarrier(cmd_buffer[fb->current_buffer],
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
             0,
@@ -245,7 +245,7 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer cmd_buffer, Fra
             0, NULL,
             1, &image_barrier);
 
-  vkEndCommandBuffer(cmd_buffer);
+  vkEndCommandBuffer(cmd_buffer[fb->current_buffer]);
 
   VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
@@ -255,7 +255,7 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer cmd_buffer, Fra
   submit_info.pWaitSemaphores = &fb->present_complete_semaphore;
   submit_info.pWaitDstStageMask = &pipe_stage_flags;
   submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &cmd_buffer;
+  submit_info.pCommandBuffers = cmd_buffer + fb->current_buffer;
   submit_info.signalSemaphoreCount = 1;
   submit_info.pSignalSemaphores = &fb->render_complete_semaphore;
 
@@ -286,19 +286,21 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer cmd_buffer, Fra
   res = vkQueueWaitIdle(queue);
 }
 
-void init_nanovg_vulkan(VkPhysicalDevice gpu, VkSurfaceKHR *surface, int winWidth, int winHeight, VkQueue *queue, NVGcontext **vg, 
-                        FrameBuffers *fb, VkCommandBuffer *cmd_buffer, VulkanDevice **device, PerfGraph *fps, DemoData *data){
+void init_nanovg_vulkan(VkPhysicalDevice gpu, VkSurfaceKHR *surface, int winWidth, int winHeight, VkQueue *queue, NVGcontext **vg,
+                        FrameBuffers *fb, VkCommandBuffer **cmd_buffer, VulkanDevice **device, PerfGraph *fps, DemoData *data){
   *device = createVulkanDevice(gpu);
 
   vkGetDeviceQueue((*device)->device, (*device)->graphicsQueueFamilyIndex, 0, queue);
   *fb = createFrameBuffers((*device), *surface, *queue, winWidth, winHeight, 0);
 
-  *cmd_buffer = createCmdBuffer((*device)->device, (*device)->commandPool);
+  (*cmd_buffer) = createCmdBuffer((*device)->device, (*device)->commandPool, fb->swapchain_image_count);
   VKNVGCreateInfo create_info = {0};
   create_info.device = (*device)->device;
   create_info.gpu = (*device)->gpu;
   create_info.renderpass = fb->render_pass;
-  create_info.cmdBuffer = *cmd_buffer;
+  create_info.cmdBuffer = (*cmd_buffer);
+  create_info.swapChainImageCount = fb->swapchain_image_count;
+  create_info.currentBuffer = &fb->current_buffer;
 
   int flags = 0;
 #ifndef NDEBUG
@@ -332,7 +334,7 @@ VulkanDevice* device;
 VkQueue queue;
 NVGcontext* vg;
 FrameBuffers fb;
-VkCommandBuffer cmd_buffer;
+VkCommandBuffer* cmd_buffer;
 DemoData data;
 PerfGraph fps;
 
@@ -386,6 +388,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
     
     
     vkDestroyInstance(instance, NULL);
+    free(cmd_buffer);
 
     return (int)msg.wParam;
 }

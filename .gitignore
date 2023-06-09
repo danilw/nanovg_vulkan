@@ -23,6 +23,10 @@ Thumbs.db
 
 ## Build dir
 build/*
+cmake-build-debug/
 
 ## xcode specific
 *xcuserdata*
+
+## jetbrains specific
+.idea/

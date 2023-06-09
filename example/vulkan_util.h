@@ -172,7 +172,7 @@ static VkInstance createVkInstance(bool enable_debug_layer) {
     }
     free(layerprop);
   }
-  
+
   VkInstance inst;
   VkResult res;
   res = vkCreateInstance(&inst_info, NULL, &inst);
@@ -237,18 +237,18 @@ VkCommandPool createCmdPool(VulkanDevice *device) {
   assert(res == VK_SUCCESS);
   return cmd_pool;
 }
-VkCommandBuffer createCmdBuffer(VkDevice device, VkCommandPool cmd_pool) {
+VkCommandBuffer* createCmdBuffer(VkDevice device, VkCommandPool cmd_pool, uint32_t swapchain_image_count) {
 
-  VkResult res;
-  VkCommandBufferAllocateInfo cmd = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-  cmd.commandPool = cmd_pool;
-  cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  cmd.commandBufferCount = 1;
+    VkResult res;
+    VkCommandBufferAllocateInfo cmd = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+    cmd.commandPool = cmd_pool;
+    cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmd.commandBufferCount = swapchain_image_count;
 
-  VkCommandBuffer cmd_buffer;
-  res = vkAllocateCommandBuffers(device, &cmd, &cmd_buffer);
-  assert(res == VK_SUCCESS);
-  return cmd_buffer;
+    VkCommandBuffer *cmd_buffer = calloc(swapchain_image_count, sizeof (VkCommandBuffer));
+    res = vkAllocateCommandBuffers(device, &cmd, cmd_buffer);
+    assert(res == VK_SUCCESS);
+    return cmd_buffer;
 }
 
 bool memory_type_from_properties(VkPhysicalDeviceMemoryProperties memoryProps, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex) {
@@ -270,7 +270,7 @@ DepthBuffer createDepthBuffer(const VulkanDevice *device, int width, int height)
   VkResult res;
   DepthBuffer depth;
   depth.format = VK_FORMAT_D24_UNORM_S8_UINT;
-  
+
   #define dformats 3
   const VkFormat depth_formats[dformats] = {VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM_S8_UINT};
   VkImageTiling image_tilling;
@@ -292,7 +292,7 @@ DepthBuffer createDepthBuffer(const VulkanDevice *device, int width, int height)
       exit(-1);
     }
   }
-  
+
   const VkFormat depth_format = depth.format;
 
   VkImageCreateInfo image_info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
@@ -498,12 +498,12 @@ FrameBuffers createFrameBuffers(const VulkanDevice *device, VkSurfaceKHR surface
   if (!supportsPresent) {
     exit(-1); //does not supported.
   }
-  VkCommandBuffer setup_cmd_buffer = createCmdBuffer(device->device, device->commandPool);
+  VkCommandBuffer *setup_cmd_buffer = createCmdBuffer(device->device, device->commandPool, 1);
 
   const VkCommandBufferBeginInfo cmd_buf_info = {
       VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
   };
-  vkBeginCommandBuffer(setup_cmd_buffer, &cmd_buf_info);
+  vkBeginCommandBuffer(setup_cmd_buffer[0], &cmd_buf_info);
 
   VkFormat colorFormat = VK_FORMAT_B8G8R8A8_UNORM;
   VkColorSpaceKHR colorSpace;
@@ -629,7 +629,7 @@ FrameBuffers createFrameBuffers(const VulkanDevice *device, VkSurfaceKHR surface
 
   SwapchainBuffers *swap_chain_buffers = (SwapchainBuffers *)malloc(swapchain_image_count * sizeof(SwapchainBuffers));
   for (uint32_t i = 0; i < swapchain_image_count; i++) {
-    swap_chain_buffers[i] = createSwapchainBuffers(device, colorFormat, setup_cmd_buffer, swapchainImages[i]);
+    swap_chain_buffers[i] = createSwapchainBuffers(device, colorFormat, setup_cmd_buffer[0], swapchainImages[i]);
   }
   free(swapchainImages);
 
@@ -656,15 +656,16 @@ FrameBuffers createFrameBuffers(const VulkanDevice *device, VkSurfaceKHR surface
     assert(res == VK_SUCCESS);
   }
 
-  vkEndCommandBuffer(setup_cmd_buffer);
+  vkEndCommandBuffer(setup_cmd_buffer[0]);
   VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
   submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &setup_cmd_buffer;
+  submitInfo.pCommandBuffers = setup_cmd_buffer;
 
   vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
   vkQueueWaitIdle(queue);
 
-  vkFreeCommandBuffers(device->device, device->commandPool, 1, &setup_cmd_buffer);
+  vkFreeCommandBuffers(device->device, device->commandPool, 1, setup_cmd_buffer);
+  free(setup_cmd_buffer);
 
   FrameBuffers buffer = {0};
   buffer.swap_chain = swap_chain;
