@@ -1,6 +1,10 @@
 
 #pragma once
 
+#ifndef MAX_FRAMES_IN_FLIGHT
+#   define MAX_FRAMES_IN_FLIGHT 3
+#endif
+
 typedef struct VulkanDevice {
   VkPhysicalDevice gpu;
   VkPhysicalDeviceProperties gpuProperties;
@@ -107,9 +111,9 @@ typedef struct FrameBuffers {
 
   VkFormat format;
   DepthBuffer depth;
-  VkSemaphore present_complete_semaphore;
-  VkSemaphore render_complete_semaphore;
-
+  VkSemaphore *present_complete_semaphore;
+  VkSemaphore *render_complete_semaphore;
+  VkFence *flight_fence;
 } FrameBuffers;
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
@@ -679,22 +683,37 @@ FrameBuffers createFrameBuffers(const VulkanDevice *device, VkSurfaceKHR surface
   buffer.buffer_size = buffer_size;
   buffer.render_pass = render_pass;
   buffer.depth = depth;
+  buffer.present_complete_semaphore = (VkSemaphore *)calloc(MAX_FRAMES_IN_FLIGHT, sizeof(VkSemaphore));
+  buffer.render_complete_semaphore = (VkSemaphore *)calloc(MAX_FRAMES_IN_FLIGHT, sizeof(VkSemaphore));
+  buffer.flight_fence = (VkFence *)calloc(MAX_FRAMES_IN_FLIGHT, sizeof(VkFence));
 
   VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-  res = vkCreateSemaphore(device->device, &presentCompleteSemaphoreCreateInfo, NULL, &buffer.present_complete_semaphore);
-  assert(res == VK_SUCCESS);
+  VkFenceCreateInfo fenceCreateInfo = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+  for (i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    res = vkCreateSemaphore(device->device, &presentCompleteSemaphoreCreateInfo, NULL, &buffer.present_complete_semaphore[i]);
+    assert(res == VK_SUCCESS);
 
-  res = vkCreateSemaphore(device->device, &presentCompleteSemaphoreCreateInfo, NULL, &buffer.render_complete_semaphore);
+    res = vkCreateSemaphore(device->device, &presentCompleteSemaphoreCreateInfo, NULL, &buffer.render_complete_semaphore[i]);
+    assert(res == VK_SUCCESS);
+
+    res = vkCreateFence(device->device, &fenceCreateInfo, NULL, &buffer.flight_fence[i]);
+    assert(res == VK_SUCCESS);
+  }
 
   return buffer;
 }
 void destroyFrameBuffers(const VulkanDevice *device, FrameBuffers *buffer) {
 
-  if (buffer->present_complete_semaphore != VK_NULL_HANDLE) {
-    vkDestroySemaphore(device->device, buffer->present_complete_semaphore, NULL);
-  }
-  if (buffer->render_complete_semaphore != VK_NULL_HANDLE) {
-    vkDestroySemaphore(device->device, buffer->render_complete_semaphore, NULL);
+  for (uint32_t i = 0; i < buffer->swapchain_image_count; ++i) {
+    if (buffer->present_complete_semaphore[i] != VK_NULL_HANDLE) {
+      vkDestroySemaphore(device->device, buffer->present_complete_semaphore[i], NULL);
+    }
+    if (buffer->render_complete_semaphore[i] != VK_NULL_HANDLE) {
+      vkDestroySemaphore(device->device, buffer->render_complete_semaphore[i], NULL);
+    }
+    if (buffer->flight_fence[i] != VK_NULL_HANDLE) {
+      vkDestroyFence(device->device, buffer->flight_fence[i], NULL);
+    }
   }
 
   for (uint32_t i = 0; i < buffer->swapchain_image_count; ++i) {
@@ -711,4 +730,7 @@ void destroyFrameBuffers(const VulkanDevice *device, FrameBuffers *buffer) {
 
   free(buffer->framebuffers);
   free(buffer->swap_chain_buffers);
+  free(buffer->present_complete_semaphore);
+  free(buffer->render_complete_semaphore);
+  free(buffer->flight_fence);
 }
