@@ -122,6 +122,8 @@ typedef struct VKNVGBuffer {
   VkBuffer buffer;
   VkDeviceMemory mem;
   VkDeviceSize size;
+  void* mapped;
+  bool initialised;
 } VKNVGBuffer;
 
 enum StencilSetting {
@@ -460,28 +462,25 @@ static VKNVGBuffer vknvg_createBuffer(VkDevice device, VkPhysicalDeviceMemoryPro
   void *mapped;
   NVGVK_CHECK_RESULT(vkMapMemory(device, mem, 0, mem_alloc.allocationSize, 0, &mapped));
   memcpy(mapped, data, size);
-  vkUnmapMemory(device, mem);
   NVGVK_CHECK_RESULT(vkBindBufferMemory(device, buffer, mem, 0));
-  VKNVGBuffer buf = {buffer, mem, mem_alloc.allocationSize};
+  VKNVGBuffer buf = {buffer, mem, mem_alloc.allocationSize, mapped, true};
   return buf;
 }
 
 static void vknvg_destroyBuffer(VkDevice device, const VkAllocationCallbacks *allocator, VKNVGBuffer *buffer) {
-
+  if (buffer->initialised) {
+    vkUnmapMemory(device, buffer->mem);
+  }
   vkDestroyBuffer(device, buffer->buffer, allocator);
   vkFreeMemory(device, buffer->mem, allocator);
 }
 
 static void vknvg_UpdateBuffer(VkDevice device, const VkAllocationCallbacks *allocator, VKNVGBuffer *buffer, VkPhysicalDeviceMemoryProperties memoryProperties, VkBufferUsageFlags usage, VkMemoryPropertyFlagBits memory_type, void *data, uint32_t size) {
-
   if (buffer->size < size) {
     vknvg_destroyBuffer(device, allocator, buffer);
     *buffer = vknvg_createBuffer(device, memoryProperties, allocator, usage, memory_type, data, size);
   } else {
-    void *mapped;
-    NVGVK_CHECK_RESULT(vkMapMemory(device, buffer->mem, 0, size, 0, &mapped));
-    memcpy(mapped, data, size);
-    vkUnmapMemory(device, buffer->mem);
+    memcpy(buffer->mapped, data, size);
   }
 }
 
@@ -1500,9 +1499,9 @@ static void vknvg_renderFlush(void *uptr) {
 
   int i;
   if (vk->ncalls > 0) {
-    vknvg_UpdateBuffer(device, allocator, &vk->vertexBuffer[currentFrame], memoryProperties, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, vk->verts, vk->nverts * sizeof(vk->verts[0]));
-    vknvg_UpdateBuffer(device, allocator, &vk->fragUniformBuffer[currentFrame], memoryProperties, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, vk->uniforms, vk->nuniforms * vk->fragSize);
-    vknvg_UpdateBuffer(device, allocator, &vk->vertUniformBuffer[currentFrame], memoryProperties, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, vk->view, sizeof(vk->view));
+    vknvg_UpdateBuffer(device, allocator, &vk->vertexBuffer[currentFrame], memoryProperties, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vk->verts, vk->nverts * sizeof(vk->verts[0]));
+    vknvg_UpdateBuffer(device, allocator, &vk->fragUniformBuffer[currentFrame], memoryProperties, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vk->uniforms, vk->nuniforms * vk->fragSize);
+    vknvg_UpdateBuffer(device, allocator, &vk->vertUniformBuffer[currentFrame], memoryProperties, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vk->view, sizeof(vk->view));
     vk->currentPipeline = nullptr;
 
     if (vk->ncalls > vk->cdescPool) {
