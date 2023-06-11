@@ -18,8 +18,8 @@ typedef struct VKNVGCreateInfo {
   VkDevice device;
   VkRenderPass renderpass;
   VkCommandBuffer *cmdBuffer;
-  uint32_t swapChainImageCount;
-  uint32_t *currentBuffer;
+  uint32_t maxFramesInFlight;
+  uint32_t *currentFrame;
 
   const VkAllocationCallbacks *allocator; //Allocator for vulkan. can be null
 } VKNVGCreateInfo;
@@ -1058,8 +1058,8 @@ static void vknvg_fill(VKNVGcontext *vk, VKNVGcall *call) {
   int i, npaths = call->pathCount;
 
   VkDevice device = vk->createInfo.device;
-  uint32_t currentBuffer = *vk->createInfo.currentBuffer;
-  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentBuffer];
+  uint32_t currentFrame = *vk->createInfo.currentFrame;
+  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentFrame];
 
 #ifdef __cplusplus
   VKNVGCreatePipelineKey pipelinekey = {};
@@ -1129,8 +1129,8 @@ static void vknvg_convexFill(VKNVGcontext *vk, VKNVGcall *call) {
   int npaths = call->pathCount;
 
   VkDevice device = vk->createInfo.device;
-  uint32_t currentBuffer = *vk->createInfo.currentBuffer;
-  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentBuffer];
+  uint32_t currentFrame = *vk->createInfo.currentFrame;
+  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentFrame];
   
 #ifdef __cplusplus
   VKNVGCreatePipelineKey pipelinekey = {};
@@ -1176,8 +1176,8 @@ static void vknvg_convexFill(VKNVGcontext *vk, VKNVGcall *call) {
 
 static void vknvg_stroke(VKNVGcontext *vk, VKNVGcall *call) {
   VkDevice device = vk->createInfo.device;
-  uint32_t currentBuffer = *vk->createInfo.currentBuffer;
-  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentBuffer];
+  uint32_t currentFrame = *vk->createInfo.currentFrame;
+  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentFrame];
 
     VKNVGpath *paths = &vk->paths[call->pathOffset];
   int npaths = call->pathCount;
@@ -1275,8 +1275,8 @@ static void vknvg_triangles(VKNVGcontext *vk, VKNVGcall *call) {
     return;
   }
   VkDevice device = vk->createInfo.device;
-  uint32_t currentBuffer = *vk->createInfo.currentBuffer;
-  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentBuffer];
+  uint32_t currentFrame = *vk->createInfo.currentFrame;
+  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentFrame];
 
 #ifdef __cplusplus
   VKNVGCreatePipelineKey pipelinekey = {};
@@ -1467,8 +1467,8 @@ static int vknvg_renderCreateTexture(void *uptr, int type, int w, int h, int ima
     free(generated_texture);
   }
 
-  uint32_t currentBuffer = *vk->createInfo.currentBuffer;
-  vknvg_InitTexture(vk->createInfo.cmdBuffer[currentBuffer], vk->queue, tex);
+  uint32_t currentFrame = *vk->createInfo.currentFrame;
+  vknvg_InitTexture(vk->createInfo.cmdBuffer[currentFrame], vk->queue, tex);
 
   return vknvg_textureId(vk, tex);
 }
@@ -1514,8 +1514,7 @@ static void vknvg_renderCancel(void *uptr) {
 static void vknvg_renderFlush(void *uptr) {
   VKNVGcontext *vk = (VKNVGcontext *)uptr;
   VkDevice device = vk->createInfo.device;
-  uint32_t currentBuffer = *vk->createInfo.currentBuffer;
-  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentBuffer];
+  uint32_t currentFrame = *vk->createInfo.currentFrame;
   VkPhysicalDeviceMemoryProperties memoryProperties = vk->memoryProperties;
   const VkAllocationCallbacks *allocator = vk->createInfo.allocator;
 
