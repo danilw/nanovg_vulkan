@@ -98,6 +98,8 @@ typedef struct FrameBuffers {
   VkFramebuffer *framebuffers;
 
   uint32_t current_buffer;
+  uint32_t max_frames_in_flight;
+  uint32_t current_frame;
 
   VkExtent2D buffer_size;
 
@@ -237,15 +239,15 @@ VkCommandPool createCmdPool(VulkanDevice *device) {
   assert(res == VK_SUCCESS);
   return cmd_pool;
 }
-VkCommandBuffer* createCmdBuffer(VkDevice device, VkCommandPool cmd_pool, uint32_t swapchain_image_count) {
+VkCommandBuffer* createCmdBuffer(VkDevice device, VkCommandPool cmd_pool, uint32_t command_buffer_count) {
 
     VkResult res;
     VkCommandBufferAllocateInfo cmd = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
     cmd.commandPool = cmd_pool;
     cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    cmd.commandBufferCount = swapchain_image_count;
+    cmd.commandBufferCount = command_buffer_count;
 
-    VkCommandBuffer *cmd_buffer = calloc(swapchain_image_count, sizeof (VkCommandBuffer));
+    VkCommandBuffer *cmd_buffer = calloc(command_buffer_count, sizeof (VkCommandBuffer));
     res = vkAllocateCommandBuffers(device, &cmd, cmd_buffer);
     assert(res == VK_SUCCESS);
     return cmd_buffer;
