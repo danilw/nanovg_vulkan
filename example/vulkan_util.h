@@ -1,6 +1,12 @@
 
 #pragma once
 
+#ifdef __APPLE__
+const bool isApplePlatform = true;
+#else
+const bool isApplePlatform = false;
+#endif
+
 typedef struct VulkanDevice {
   VkPhysicalDevice gpu;
   VkPhysicalDeviceProperties gpuProperties;
@@ -99,6 +105,7 @@ typedef struct FrameBuffers {
 
   uint32_t current_buffer;
   uint32_t current_frame;
+  uint64_t num_swaps;
 
   VkExtent2D buffer_size;
 
@@ -137,10 +144,18 @@ static VkInstance createVkInstance(bool enable_debug_layer) {
     append_extensions_count = 0;
   }
 
+  static const char *apple_extensions[] = {
+    VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
+  };
+  uint32_t apple_extensions_count = sizeof(apple_extensions) / sizeof(apple_extensions[0]);
+  if (!isApplePlatform) {
+    apple_extensions_count = 0;
+  }
+
   uint32_t extensions_count = 0;
   const char **glfw_extensions = glfwGetRequiredInstanceExtensions(&extensions_count);
 
-  const char **extensions = (const char **)calloc(extensions_count + append_extensions_count, sizeof(char *));
+  const char **extensions = (const char **)calloc(extensions_count + append_extensions_count + apple_extensions_count, sizeof(char *));
 
   for (uint32_t i = 0; i < extensions_count; ++i) {
     extensions[i] = glfw_extensions[i];
@@ -148,12 +163,18 @@ static VkInstance createVkInstance(bool enable_debug_layer) {
   for (uint32_t i = 0; i < append_extensions_count; ++i) {
     extensions[extensions_count++] = append_extensions[i];
   }
+  for (uint32_t i = 0; i < apple_extensions_count; ++i) {
+    extensions[extensions_count++] = apple_extensions[i];
+  }
 
   // initialize the VkInstanceCreateInfo structure
   VkInstanceCreateInfo inst_info = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
   inst_info.pApplicationInfo = &app_info;
   inst_info.enabledExtensionCount = extensions_count;
   inst_info.ppEnabledExtensionNames = extensions;
+  if (isApplePlatform) {
+    inst_info.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+  }
 
   static const char *instance_validation_layers[] = {
       "VK_LAYER_KHRONOS_validation"
