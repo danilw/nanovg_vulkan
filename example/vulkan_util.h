@@ -1,10 +1,6 @@
 
 #pragma once
 
-#ifndef MAX_FRAMES_IN_FLIGHT
-#   define MAX_FRAMES_IN_FLIGHT 3
-#endif
-
 typedef struct VulkanDevice {
   VkPhysicalDevice gpu;
   VkPhysicalDeviceProperties gpuProperties;
@@ -102,8 +98,7 @@ typedef struct FrameBuffers {
   VkFramebuffer *framebuffers;
 
   uint32_t current_buffer;
-  uint32_t max_frames_in_flight;
-  uint32_t current_frame;
+  //uint32_t current_frame;
 
   VkExtent2D buffer_size;
 
@@ -683,13 +678,13 @@ FrameBuffers createFrameBuffers(const VulkanDevice *device, VkSurfaceKHR surface
   buffer.buffer_size = buffer_size;
   buffer.render_pass = render_pass;
   buffer.depth = depth;
-  buffer.present_complete_semaphore = (VkSemaphore *)calloc(MAX_FRAMES_IN_FLIGHT, sizeof(VkSemaphore));
-  buffer.render_complete_semaphore = (VkSemaphore *)calloc(MAX_FRAMES_IN_FLIGHT, sizeof(VkSemaphore));
-  buffer.flight_fence = (VkFence *)calloc(MAX_FRAMES_IN_FLIGHT, sizeof(VkFence));
+  buffer.present_complete_semaphore = (VkSemaphore *)calloc(swapchain_image_count, sizeof(VkSemaphore));
+  buffer.render_complete_semaphore = (VkSemaphore *)calloc(swapchain_image_count, sizeof(VkSemaphore));
+  buffer.flight_fence = (VkFence *)calloc(swapchain_image_count, sizeof(VkFence));
 
   VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
   VkFenceCreateInfo fenceCreateInfo = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
-  for (i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+  for (i = 0; i < swapchain_image_count; i++) {
     res = vkCreateSemaphore(device->device, &presentCompleteSemaphoreCreateInfo, NULL, &buffer.present_complete_semaphore[i]);
     assert(res == VK_SUCCESS);
 

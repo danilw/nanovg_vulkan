@@ -53,7 +53,7 @@ void prepareFrame(VkDevice device, VkCommandBuffer *cmd_buffer, FrameBuffers *fb
 
   // Get the index of the next available swapchain image:
   res = vkAcquireNextImageKHR(device, fb->swap_chain, UINT64_MAX,
-                              fb->present_complete_semaphore[fb->current_frame],
+                              fb->present_complete_semaphore[fb->current_buffer],
                               VK_NULL_HANDLE,
                               &fb->current_buffer);
 
@@ -66,7 +66,7 @@ void prepareFrame(VkDevice device, VkCommandBuffer *cmd_buffer, FrameBuffers *fb
   assert(res == VK_SUCCESS);
 
   const VkCommandBufferBeginInfo cmd_buf_info = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-  res = vkBeginCommandBuffer(cmd_buffer[fb->current_frame], &cmd_buf_info);
+  res = vkBeginCommandBuffer(cmd_buffer[fb->current_buffer], &cmd_buf_info);
   assert(res == VK_SUCCESS);
 
   VkClearValue clear_values[2];
@@ -89,7 +89,7 @@ void prepareFrame(VkDevice device, VkCommandBuffer *cmd_buffer, FrameBuffers *fb
   rp_begin.clearValueCount = 2;
   rp_begin.pClearValues = clear_values;
 
-  vkCmdBeginRenderPass(cmd_buffer[fb->current_frame], &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+  vkCmdBeginRenderPass(cmd_buffer[fb->current_buffer], &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
   VkViewport viewport;
   viewport.width = (float) fb->buffer_size.width;
@@ -98,15 +98,15 @@ void prepareFrame(VkDevice device, VkCommandBuffer *cmd_buffer, FrameBuffers *fb
   viewport.maxDepth = (float) 1.0f;
   viewport.x = (float) rp_begin.renderArea.offset.x;
   viewport.y = (float) rp_begin.renderArea.offset.y;
-  vkCmdSetViewport(cmd_buffer[fb->current_frame], 0, 1, &viewport);
+  vkCmdSetViewport(cmd_buffer[fb->current_buffer], 0, 1, &viewport);
 
   VkRect2D scissor = rp_begin.renderArea;
-  vkCmdSetScissor(cmd_buffer[fb->current_frame], 0, 1, &scissor);
+  vkCmdSetScissor(cmd_buffer[fb->current_buffer], 0, 1, &scissor);
 }
 void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, FrameBuffers *fb) {
   VkResult res;
 
-  vkCmdEndRenderPass(cmd_buffer[fb->current_frame]);
+  vkCmdEndRenderPass(cmd_buffer[fb->current_buffer]);
 
   VkImageMemoryBarrier image_barrier = {
       .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -125,7 +125,7 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, Fr
           .layerCount = 1,
       },
   };
-  vkCmdPipelineBarrier(cmd_buffer[fb->current_frame],
+  vkCmdPipelineBarrier(cmd_buffer[fb->current_buffer],
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
             0,
@@ -133,22 +133,22 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, Fr
             0, NULL,
             1, &image_barrier);
 
-  vkEndCommandBuffer(cmd_buffer[fb->current_frame]);
+  vkEndCommandBuffer(cmd_buffer[fb->current_buffer]);
 
   VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
   VkSubmitInfo submit_info = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
   submit_info.pNext = NULL;
   submit_info.waitSemaphoreCount = 1;
-  submit_info.pWaitSemaphores = &fb->present_complete_semaphore[fb->current_frame];
+  submit_info.pWaitSemaphores = &fb->present_complete_semaphore[fb->current_buffer];
   submit_info.pWaitDstStageMask = &pipe_stage_flags;
   submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &cmd_buffer[fb->current_frame];
+  submit_info.pCommandBuffers = &cmd_buffer[fb->current_buffer];
   submit_info.signalSemaphoreCount = 1;
-  submit_info.pSignalSemaphores = &fb->render_complete_semaphore[fb->current_frame];
+  submit_info.pSignalSemaphores = &fb->render_complete_semaphore[fb->current_buffer];
 
   /* Queue the command buffer for execution */
-  vkResetFences(device, 1, &fb->flight_fence[fb->current_frame]);
+  vkResetFences(device, 1, &fb->flight_fence[fb->current_buffer]);
   res = vkQueueSubmit(queue, 1, &submit_info, 0);
   assert(res == VK_SUCCESS);
 
@@ -160,7 +160,7 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, Fr
   present.pSwapchains = &fb->swap_chain;
   present.pImageIndices = &fb->current_buffer;
   present.waitSemaphoreCount = 1;
-  present.pWaitSemaphores = &fb->render_complete_semaphore[fb->current_frame];
+  present.pWaitSemaphores = &fb->render_complete_semaphore[fb->current_buffer];
 
   res = vkQueuePresentKHR(queue, &present);
   if (res == VK_ERROR_OUT_OF_DATE_KHR)
@@ -172,10 +172,10 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, Fr
   }
   assert(res == VK_SUCCESS);
 
-  res = vkWaitForFences(device, 1, &fb->flight_fence[fb->current_frame], true, UINT64_MAX);
+  res = vkWaitForFences(device, 1, &fb->flight_fence[fb->current_buffer], true, UINT64_MAX);
   assert(res == VK_SUCCESS || res == VK_TIMEOUT);
 
-  fb->current_frame = (fb->current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
+  //fb->current_frame = (fb->current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 int main() {
@@ -289,14 +289,14 @@ int main() {
   vkGetDeviceQueue(device->device, device->graphicsQueueFamilyIndex, 0, &queue);
   FrameBuffers fb = createFrameBuffers(device, surface, queue, winWidth, winHeight, 0);
 
-  VkCommandBuffer *cmd_buffer = createCmdBuffer(device->device, device->commandPool, MAX_FRAMES_IN_FLIGHT);
+  VkCommandBuffer *cmd_buffer = createCmdBuffer(device->device, device->commandPool, fb.swapchain_image_count);
   VKNVGCreateInfo create_info = {0};
   create_info.device = device->device;
   create_info.gpu = device->gpu;
   create_info.renderpass = fb.render_pass;
   create_info.cmdBuffer = cmd_buffer;
-  create_info.maxFramesInFlight = MAX_FRAMES_IN_FLIGHT;
-  create_info.currentFrame = &fb.current_frame;
+  create_info.swapchainImageCount = fb.swapchain_image_count;
+  create_info.currentBuffer = &fb.current_buffer;
 
   int flags = 0;
 #ifndef NDEBUG
