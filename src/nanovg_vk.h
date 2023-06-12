@@ -1194,8 +1194,9 @@ static void vknvg_stroke(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_index)
     vknvg_bindPipeline(vk, cmdBuffer, &pipelinekey);
     vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet2[call_index], 0, nullptr);
 
+    VkDeviceSize offsets[] = {0};
     for (int i = 0; i < npaths; ++i) {
-      const VkDeviceSize offsets[1] = {paths[i].strokeOffset * sizeof(NVGvertex)};
+      offsets[0] = paths[i].strokeOffset * sizeof(NVGvertex);
       vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentFrame].buffer, offsets);
       vkCmdDraw(cmdBuffer, paths[i].strokeCount, 1, 0, 0);
     }
@@ -1206,7 +1207,7 @@ static void vknvg_stroke(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_index)
      vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet1[call_index], 0, nullptr);
 
      for (int i = 0; i < npaths; ++i) {
-       const VkDeviceSize offsets[1] = {paths[i].strokeOffset * sizeof(NVGvertex)};
+       offsets[0] = paths[i].strokeOffset * sizeof(NVGvertex);
        vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentFrame].buffer, offsets);
        vkCmdDraw(cmdBuffer, paths[i].strokeCount, 1, 0, 0);
      }
@@ -1217,7 +1218,7 @@ static void vknvg_stroke(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_index)
      vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet1[call_index], 0, nullptr);
 
      for (int i = 0; i < npaths; ++i) {
-       const VkDeviceSize offsets[1] = {paths[i].strokeOffset * sizeof(NVGvertex)};
+       offsets[0] = paths[i].strokeOffset * sizeof(NVGvertex);
        vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentFrame].buffer, offsets);
        vkCmdDraw(cmdBuffer, paths[i].strokeCount, 1, 0, 0);
      }
@@ -1239,8 +1240,9 @@ static void vknvg_stroke(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_index)
     vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet1[call_index], 0, nullptr);
     // Draw Strokes
 
+    VkDeviceSize offsets[] = {0};
     for (int i = 0; i < npaths; ++i) {
-      const VkDeviceSize offsets[1] = {paths[i].strokeOffset * sizeof(NVGvertex)};
+      offsets[0] = paths[i].strokeOffset * sizeof(NVGvertex);
       vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentFrame].buffer, offsets);
       vkCmdDraw(cmdBuffer, paths[i].strokeCount, 1, 0, 0);
     }
