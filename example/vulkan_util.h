@@ -98,7 +98,7 @@ typedef struct FrameBuffers {
   VkFramebuffer *framebuffers;
 
   uint32_t current_buffer;
-  //uint32_t current_frame;
+  uint32_t current_frame;
 
   VkExtent2D buffer_size;
 
