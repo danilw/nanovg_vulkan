@@ -89,7 +89,7 @@ void prepareFrame(VkDevice device, VkCommandBuffer *cmd_buffer, FrameBuffers *fb
   rp_begin.clearValueCount = 2;
   rp_begin.pClearValues = clear_values;
 
-  vkCmdBeginRenderPass(cmd_buffer[fb->current_buffer], &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+  vkCmdBeginRenderPass(cmd_buffer[fb->current_frame], &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
   VkViewport viewport;
   viewport.width = (float) fb->buffer_size.width;
@@ -98,15 +98,15 @@ void prepareFrame(VkDevice device, VkCommandBuffer *cmd_buffer, FrameBuffers *fb
   viewport.maxDepth = (float) 1.0f;
   viewport.x = (float) rp_begin.renderArea.offset.x;
   viewport.y = (float) rp_begin.renderArea.offset.y;
-  vkCmdSetViewport(cmd_buffer[fb->current_buffer], 0, 1, &viewport);
+  vkCmdSetViewport(cmd_buffer[fb->current_frame], 0, 1, &viewport);
 
   VkRect2D scissor = rp_begin.renderArea;
-  vkCmdSetScissor(cmd_buffer[fb->current_buffer], 0, 1, &scissor);
+  vkCmdSetScissor(cmd_buffer[fb->current_frame], 0, 1, &scissor);
 }
 void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, FrameBuffers *fb) {
   VkResult res;
 
-  vkCmdEndRenderPass(cmd_buffer[fb->current_buffer]);
+  vkCmdEndRenderPass(cmd_buffer[fb->current_frame]);
 
   VkImageMemoryBarrier image_barrier = {
       .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -125,7 +125,7 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, Fr
           .layerCount = 1,
       },
   };
-  vkCmdPipelineBarrier(cmd_buffer[fb->current_buffer],
+  vkCmdPipelineBarrier(cmd_buffer[fb->current_frame],
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
             0,
@@ -133,7 +133,7 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, Fr
             0, NULL,
             1, &image_barrier);
 
-  vkEndCommandBuffer(cmd_buffer[fb->current_buffer]);
+  vkEndCommandBuffer(cmd_buffer[fb->current_frame]);
 
   VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
@@ -143,7 +143,7 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, Fr
   submit_info.pWaitSemaphores = &fb->present_complete_semaphore[fb->current_frame];
   submit_info.pWaitDstStageMask = &pipe_stage_flags;
   submit_info.commandBufferCount = 1;
-  submit_info.pCommandBuffers = &cmd_buffer[fb->current_buffer];
+  submit_info.pCommandBuffers = &cmd_buffer[fb->current_frame];
   submit_info.signalSemaphoreCount = 1;
   submit_info.pSignalSemaphores = &fb->render_complete_semaphore[fb->current_frame];
 
@@ -171,16 +171,15 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, Fr
   assert(res == VK_SUCCESS);
 
   fb->current_frame = (fb->current_frame + 1) % fb->swapchain_image_count;
+  fb->num_swaps++;
 
-  //wait for the next frame ( https://stackoverflow.com/a/35573312 )
-  if (fb->num_swaps > fb->swapchain_image_count - 1) {
+  if (fb->num_swaps >= fb->swapchain_image_count) {
     res = vkWaitForFences(device, 1, &fb->flight_fence[fb->current_frame], true, UINT64_MAX);
     assert(res == VK_SUCCESS);
 
     res = vkResetFences(device, 1, &fb->flight_fence[fb->current_frame]);
     assert(res == VK_SUCCESS);
   }
-  fb->num_swaps++;
 }
 
 int main() {
@@ -301,7 +300,7 @@ int main() {
   create_info.renderpass = fb.render_pass;
   create_info.cmdBuffer = cmd_buffer;
   create_info.swapchainImageCount = fb.swapchain_image_count;
-  create_info.currentBuffer = &fb.current_buffer;
+  create_info.currentFrame = &fb.current_frame;
 
   int flags = 0;
 #ifndef NDEBUG

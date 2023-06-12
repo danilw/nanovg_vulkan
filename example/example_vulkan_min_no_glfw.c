@@ -302,7 +302,7 @@ void init_nanovg_vulkan(VkPhysicalDevice gpu, VkSurfaceKHR *surface, int winWidt
     create_info.renderpass = fb->render_pass;
     create_info.cmdBuffer = (*cmd_buffer);
     create_info.swapchainImageCount = fb->swapchain_image_count;
-    create_info.currentBuffer = &fb->current_buffer;
+    create_info.currentFrame = &fb->current_buffer;
 
     int flags = 0;
 #ifndef NDEBUG

@@ -19,7 +19,7 @@ typedef struct VKNVGCreateInfo {
   VkRenderPass renderpass;
   VkCommandBuffer *cmdBuffer;
   uint32_t swapchainImageCount;
-  uint32_t *currentBuffer;
+  uint32_t *currentFrame;
 
   const VkAllocationCallbacks *allocator; //Allocator for vulkan. can be null
 } VKNVGCreateInfo;
@@ -179,7 +179,7 @@ typedef struct VKNVGcontext {
   // Per frame buffers
   VKNVGcall *calls;
   int ccalls;
-  int ncalls;
+  uint32_t ncalls;
   VKNVGpath *paths;
   int cpaths;
   int npaths;
@@ -191,7 +191,7 @@ typedef struct VKNVGcontext {
   VkDescriptorSet *uniformDescriptorSet1;
   VkDescriptorSet *uniformDescriptorSet2;
 
-  int cdescPool;
+  uint32_t cdescPool;
 
   unsigned char *uniforms;
   int cuniforms;
@@ -999,7 +999,7 @@ static void vknvg_vset(NVGvertex *vtx, float x, float y, float u, float v) {
 
 static void vknvg_setUniforms(VKNVGcontext *vk, VkDescriptorSet descSet, int uniformOffset, int image) {
   VkDevice device = vk->createInfo.device;
-  uint32_t currentBuffer = *vk->createInfo.currentBuffer;
+  uint32_t currentFrame = *vk->createInfo.currentFrame;
 
   VkWriteDescriptorSet writes[3] = {{VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET}, {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET}, {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET}};
 
@@ -1008,7 +1008,7 @@ static void vknvg_setUniforms(VKNVGcontext *vk, VkDescriptorSet descSet, int uni
 #else
   VkDescriptorBufferInfo vertUniformBufferInfo = {0};
 #endif
-  vertUniformBufferInfo.buffer = vk->vertUniformBuffer[currentBuffer].buffer;
+  vertUniformBufferInfo.buffer = vk->vertUniformBuffer[currentFrame].buffer;
   vertUniformBufferInfo.offset = 0;
   vertUniformBufferInfo.range = sizeof(vk->view);
 
@@ -1024,7 +1024,7 @@ static void vknvg_setUniforms(VKNVGcontext *vk, VkDescriptorSet descSet, int uni
 #else
   VkDescriptorBufferInfo uniform_buffer_info = {0};
 #endif
-  uniform_buffer_info.buffer = vk->fragUniformBuffer[currentBuffer].buffer;
+  uniform_buffer_info.buffer = vk->fragUniformBuffer[currentFrame].buffer;
   uniform_buffer_info.offset = uniformOffset;
   uniform_buffer_info.range = sizeof(VKNVGfragUniforms);
 
@@ -1056,13 +1056,13 @@ static void vknvg_setUniforms(VKNVGcontext *vk, VkDescriptorSet descSet, int uni
   vkUpdateDescriptorSets(device, 3, writes, 0, nullptr);
 }
 
-static void vknvg_fill(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_index) {
+static void vknvg_fill(VKNVGcontext *vk, VKNVGcall *call, uint32_t descriptor_offset) {
   VKNVGpath *paths = &vk->paths[call->pathOffset];
   int npaths = call->pathCount;
 
   VkDevice device = vk->createInfo.device;
-  uint32_t currentBuffer = *vk->createInfo.currentBuffer;
-  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentBuffer];
+  uint32_t currentFrame = *vk->createInfo.currentFrame;
+  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentFrame];
 
 #ifdef __cplusplus
   VKNVGCreatePipelineKey pipelinekey = {};
@@ -1080,17 +1080,17 @@ static void vknvg_fill(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_index) {
 
   vknvg_bindPipeline(vk, cmdBuffer, &pipelinekey);
 
-  vknvg_setUniforms(vk, vk->uniformDescriptorSet1[call_index], call->uniformOffset, call->image);
-  vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet1[call_index], 0, nullptr);
+  vknvg_setUniforms(vk, vk->uniformDescriptorSet1[descriptor_offset], call->uniformOffset, call->image);
+  vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet1[descriptor_offset], 0, nullptr);
 
   for (int i = 0; i < npaths; i++) {
     const VkDeviceSize offsets[1] = {paths[i].fillOffset * sizeof(NVGvertex)};
-    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentBuffer].buffer, offsets);
+    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentFrame].buffer, offsets);
     vkCmdDraw(cmdBuffer, paths[i].fillCount, 1, 0, 0);
   }
 
-  vknvg_setUniforms(vk, vk->uniformDescriptorSet2[call_index], call->uniformOffset + vk->fragSize, call->image);
-  vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet2[call_index], 0, nullptr);
+  vknvg_setUniforms(vk, vk->uniformDescriptorSet2[descriptor_offset], call->uniformOffset + vk->fragSize, call->image);
+  vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet2[descriptor_offset], 0, nullptr);
 
   if (vk->flags & NVG_ANTIALIAS) {
 
@@ -1103,7 +1103,7 @@ static void vknvg_fill(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_index) {
     // Draw fringes
     for (int i = 0; i < npaths; ++i) {
       const VkDeviceSize offsets[1] = {paths[i].strokeOffset * sizeof(NVGvertex)};
-      vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentBuffer].buffer, offsets);
+      vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentFrame].buffer, offsets);
       vkCmdDraw(cmdBuffer, paths[i].strokeCount, 1, 0, 0);
     }
   }
@@ -1116,17 +1116,17 @@ static void vknvg_fill(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_index) {
   vknvg_bindPipeline(vk, cmdBuffer, &pipelinekey);
 
   const VkDeviceSize offsets[1] = {call->triangleOffset * sizeof(NVGvertex)};
-  vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentBuffer].buffer, offsets);
+  vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentFrame].buffer, offsets);
   vkCmdDraw(cmdBuffer, call->triangleCount, 1, 0, 0);
 }
 
-static void vknvg_convexFill(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_index) {
+static void vknvg_convexFill(VKNVGcontext *vk, VKNVGcall *call, uint32_t descriptor_offset) {
   VKNVGpath *paths = &vk->paths[call->pathOffset];
   int npaths = call->pathCount;
 
   VkDevice device = vk->createInfo.device;
-  uint32_t currentBuffer = *vk->createInfo.currentBuffer;
-  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentBuffer];
+  uint32_t currentFrame = *vk->createInfo.currentFrame;
+  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentFrame];
   
 #ifdef __cplusplus
   VKNVGCreatePipelineKey pipelinekey = {};
@@ -1144,12 +1144,12 @@ static void vknvg_convexFill(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_in
   vknvg_bindPipeline(vk, cmdBuffer, &pipelinekey);
 
 
-  vknvg_setUniforms(vk, vk->uniformDescriptorSet1[call_index], call->uniformOffset, call->image);
-  vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet1[call_index], 0, nullptr);
+  vknvg_setUniforms(vk, vk->uniformDescriptorSet1[descriptor_offset], call->uniformOffset, call->image);
+  vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet1[descriptor_offset], 0, nullptr);
 
   for (int i = 0; i < npaths; ++i) {
     const VkDeviceSize offsets[1] = {paths[i].fillOffset * sizeof(NVGvertex)};
-    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentBuffer].buffer, offsets);
+    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentFrame].buffer, offsets);
     vkCmdDraw(cmdBuffer, paths[i].fillCount, 1, 0, 0);
   }
   if (vk->flags & NVG_ANTIALIAS) {
@@ -1159,23 +1159,23 @@ static void vknvg_convexFill(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_in
     // Draw fringes
     for (int i = 0; i < npaths; ++i) {
       const VkDeviceSize offsets[1] = {paths[i].strokeOffset * sizeof(NVGvertex)};
-      vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentBuffer].buffer, offsets);
+      vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentFrame].buffer, offsets);
       vkCmdDraw(cmdBuffer, paths[i].strokeCount, 1, 0, 0);
     }
   }
 }
 
-static void vknvg_stroke(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_index) {
+static void vknvg_stroke(VKNVGcontext *vk, VKNVGcall *call, uint32_t descriptor_offset) {
   VkDevice device = vk->createInfo.device;
-  uint32_t currentBuffer = *vk->createInfo.currentBuffer;
-  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentBuffer];
+  uint32_t currentFrame = *vk->createInfo.currentFrame;
+  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentFrame];
 
     VKNVGpath *paths = &vk->paths[call->pathOffset];
   int npaths = call->pathCount;
 
   if (vk->flags & NVG_STENCIL_STROKES) {
-    vknvg_setUniforms(vk, vk->uniformDescriptorSet1[call_index], call->uniformOffset, call->image);
-    vknvg_setUniforms(vk, vk->uniformDescriptorSet2[call_index], call->uniformOffset + vk->fragSize, call->image);
+    vknvg_setUniforms(vk, vk->uniformDescriptorSet1[descriptor_offset], call->uniformOffset, call->image);
+    vknvg_setUniforms(vk, vk->uniformDescriptorSet2[descriptor_offset], call->uniformOffset + vk->fragSize, call->image);
 
 #ifdef __cplusplus
     VKNVGCreatePipelineKey pipelinekey = {};
@@ -1192,34 +1192,34 @@ static void vknvg_stroke(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_index)
     pipelinekey.stencilStroke = VKNVG_STENCIL_STROKE_FILL;
 
     vknvg_bindPipeline(vk, cmdBuffer, &pipelinekey);
-    vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet2[call_index], 0, nullptr);
+    vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet2[descriptor_offset], 0, nullptr);
 
     VkDeviceSize offsets[] = {0};
     for (int i = 0; i < npaths; ++i) {
       offsets[0] = paths[i].strokeOffset * sizeof(NVGvertex);
-      vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentBuffer].buffer, offsets);
+      vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentFrame].buffer, offsets);
       vkCmdDraw(cmdBuffer, paths[i].strokeCount, 1, 0, 0);
     }
 
     // //Draw AA shape if stencil EQUAL passes
      pipelinekey.stencilStroke = VKNVG_STENCIL_STROKE_DRAW_AA;
      vknvg_bindPipeline(vk, cmdBuffer, &pipelinekey);
-     vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet1[call_index], 0, nullptr);
+     vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet1[descriptor_offset], 0, nullptr);
 
      for (int i = 0; i < npaths; ++i) {
        offsets[0] = paths[i].strokeOffset * sizeof(NVGvertex);
-       vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentBuffer].buffer, offsets);
+       vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentFrame].buffer, offsets);
        vkCmdDraw(cmdBuffer, paths[i].strokeCount, 1, 0, 0);
      }
 
      // Fill stencil with 0, always
      pipelinekey.stencilStroke = VKNVG_STENCIL_STROKE_CLEAR;
      vknvg_bindPipeline(vk, cmdBuffer, &pipelinekey);
-     vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet1[call_index], 0, nullptr);
+     vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet1[descriptor_offset], 0, nullptr);
 
      for (int i = 0; i < npaths; ++i) {
        offsets[0] = paths[i].strokeOffset * sizeof(NVGvertex);
-       vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentBuffer].buffer, offsets);
+       vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentFrame].buffer, offsets);
        vkCmdDraw(cmdBuffer, paths[i].strokeCount, 1, 0, 0);
      }
   } else {
@@ -1236,26 +1236,26 @@ static void vknvg_stroke(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_index)
     pipelinekey.edgeAAShader = vk->flags & NVG_ANTIALIAS;
 
     vknvg_bindPipeline(vk, cmdBuffer, &pipelinekey);
-    vknvg_setUniforms(vk, vk->uniformDescriptorSet1[call_index], call->uniformOffset, call->image);
-    vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet1[call_index], 0, nullptr);
+    vknvg_setUniforms(vk, vk->uniformDescriptorSet1[descriptor_offset], call->uniformOffset, call->image);
+    vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet1[descriptor_offset], 0, nullptr);
     // Draw Strokes
 
     VkDeviceSize offsets[] = {0};
     for (int i = 0; i < npaths; ++i) {
       offsets[0] = paths[i].strokeOffset * sizeof(NVGvertex);
-      vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentBuffer].buffer, offsets);
+      vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentFrame].buffer, offsets);
       vkCmdDraw(cmdBuffer, paths[i].strokeCount, 1, 0, 0);
     }
   }
 }
 
-static void vknvg_triangles(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_index) {
+static void vknvg_triangles(VKNVGcontext *vk, VKNVGcall *call, uint32_t descriptor_offset) {
   if (call->triangleCount == 0) {
     return;
   }
   VkDevice device = vk->createInfo.device;
-  uint32_t currentBuffer = *vk->createInfo.currentBuffer;
-  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentBuffer];
+  uint32_t currentFrame = *vk->createInfo.currentFrame;
+  VkCommandBuffer cmdBuffer = vk->createInfo.cmdBuffer[currentFrame];
 
 #ifdef __cplusplus
   VKNVGCreatePipelineKey pipelinekey = {};
@@ -1268,11 +1268,11 @@ static void vknvg_triangles(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_ind
   pipelinekey.edgeAAShader = vk->flags & NVG_ANTIALIAS;
 
   vknvg_bindPipeline(vk, cmdBuffer, &pipelinekey);
-  vknvg_setUniforms(vk, vk->uniformDescriptorSet1[call_index], call->uniformOffset, call->image);
-  vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet1[call_index], 0, nullptr);
+  vknvg_setUniforms(vk, vk->uniformDescriptorSet1[descriptor_offset], call->uniformOffset, call->image);
+  vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet1[descriptor_offset], 0, nullptr);
 
   const VkDeviceSize offsets[1] = {call->triangleOffset * sizeof(NVGvertex)};
-  vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentBuffer].buffer, offsets);
+  vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vk->vertexBuffer[currentFrame].buffer, offsets);
 
   vkCmdDraw(cmdBuffer, call->triangleCount, 1, 0, 0);
 }
@@ -1441,8 +1441,8 @@ static int vknvg_renderCreateTexture(void *uptr, int type, int w, int h, int ima
     free(generated_texture);
   }
 
-  uint32_t currentBuffer = *vk->createInfo.currentBuffer;
-  vknvg_InitTexture(vk->createInfo.cmdBuffer[currentBuffer], vk->queue, tex);
+  uint32_t currentFrame = *vk->createInfo.currentFrame;
+  vknvg_InitTexture(vk->createInfo.cmdBuffer[currentFrame], vk->queue, tex);
 
   return vknvg_textureId(vk, tex);
 }
@@ -1488,7 +1488,7 @@ static void vknvg_renderCancel(void *uptr) {
 static void vknvg_renderFlush(void *uptr) {
   VKNVGcontext *vk = (VKNVGcontext *)uptr;
   VkDevice device = vk->createInfo.device;
-  uint32_t currentBuffer = *vk->createInfo.currentBuffer;
+  uint32_t currentFrame = *vk->createInfo.currentFrame;
   VkPhysicalDeviceMemoryProperties memoryProperties = vk->memoryProperties;
   const VkAllocationCallbacks *allocator = vk->createInfo.allocator;
 
@@ -1501,14 +1501,14 @@ static void vknvg_renderFlush(void *uptr) {
 
   int i;
   if (vk->ncalls > 0) {
-    vknvg_UpdateBuffer(device, allocator, &vk->vertexBuffer[currentBuffer], memoryProperties, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vk->verts, vk->nverts * sizeof(vk->verts[0]));
-    vknvg_UpdateBuffer(device, allocator, &vk->fragUniformBuffer[currentBuffer], memoryProperties, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vk->uniforms, vk->nuniforms * vk->fragSize);
-    vknvg_UpdateBuffer(device, allocator, &vk->vertUniformBuffer[currentBuffer], memoryProperties, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vk->view, sizeof(vk->view));
+    vknvg_UpdateBuffer(device, allocator, &vk->vertexBuffer[currentFrame], memoryProperties, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vk->verts, vk->nverts * sizeof(vk->verts[0]));
+    vknvg_UpdateBuffer(device, allocator, &vk->fragUniformBuffer[currentFrame], memoryProperties, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vk->uniforms, vk->nuniforms * vk->fragSize);
+    vknvg_UpdateBuffer(device, allocator, &vk->vertUniformBuffer[currentFrame], memoryProperties, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, vk->view, sizeof(vk->view));
     vk->currentPipeline = nullptr;
 
     if (vk->ncalls > vk->cdescPool) {
       vkDestroyDescriptorPool(device, vk->descPool, allocator);
-      vk->descPool = vknvg_createDescriptorPool(device, vk->ncalls, allocator);
+      vk->descPool = vknvg_createDescriptorPool(device, vk->ncalls * vk->createInfo.swapchainImageCount, allocator);
 
       VkDescriptorSetAllocateInfo alloc_info[1] = {
               {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO, nullptr, vk->descPool, 1, &vk->descLayout},
@@ -1516,10 +1516,10 @@ static void vknvg_renderFlush(void *uptr) {
 
       free(vk->uniformDescriptorSet1);
       free(vk->uniformDescriptorSet2);
-      vk->uniformDescriptorSet1 = (VkDescriptorSet *) calloc(vk->ncalls, sizeof(VkDescriptorSet));
-      vk->uniformDescriptorSet2 = (VkDescriptorSet *) calloc(vk->ncalls, sizeof(VkDescriptorSet));
+      vk->uniformDescriptorSet1 = (VkDescriptorSet *) calloc(vk->ncalls * vk->createInfo.swapchainImageCount, sizeof(VkDescriptorSet));
+      vk->uniformDescriptorSet2 = (VkDescriptorSet *) calloc(vk->ncalls * vk->createInfo.swapchainImageCount, sizeof(VkDescriptorSet));
 
-      for (i = 0; i < vk->ncalls; i++) {
+      for (i = 0; i < vk->ncalls * vk->createInfo.swapchainImageCount; i++) {
         NVGVK_CHECK_RESULT(vkAllocateDescriptorSets(device, alloc_info, &vk->uniformDescriptorSet1[i]))
         NVGVK_CHECK_RESULT(vkAllocateDescriptorSets(device, alloc_info, &vk->uniformDescriptorSet2[i]))
       }
@@ -1527,16 +1527,17 @@ static void vknvg_renderFlush(void *uptr) {
       vk->cdescPool = vk->ncalls;
     }
 
+      uint32_t descriptor_offset = vk->cdescPool * currentFrame; //ensure descriptor sets dont clash
       for (i = 0; i < vk->ncalls; i++) {
           VKNVGcall *call = &vk->calls[i];
           if (call->type == VKNVG_FILL) {
-              vknvg_fill(vk, call, i);
+              vknvg_fill(vk, call, descriptor_offset + i);
           } else if (call->type == VKNVG_CONVEXFILL) {
-              vknvg_convexFill(vk, call, i);
+              vknvg_convexFill(vk, call, descriptor_offset + i);
           } else if (call->type == VKNVG_STROKE) {
-              vknvg_stroke(vk, call, i);
+              vknvg_stroke(vk, call, descriptor_offset + i);
           } else if (call->type == VKNVG_TRIANGLES) {
-              vknvg_triangles(vk, call, i);
+              vknvg_triangles(vk, call, descriptor_offset + i);
           }
       }
   }
