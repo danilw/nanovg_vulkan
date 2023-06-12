@@ -147,8 +147,7 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, Fr
   submit_info.signalSemaphoreCount = 1;
   submit_info.pSignalSemaphores = &fb->render_complete_semaphore[fb->current_frame];
 
-  /* Queue the command buffer for execution */
-  res = vkQueueSubmit(queue, 1, &submit_info, fb->flight_fence[fb->current_buffer]);
+  res = vkQueueSubmit(queue, 1, &submit_info, fb->flight_fence[fb->current_frame]);
   assert(res == VK_SUCCESS);
 
   /* Now present the image in the window */
@@ -171,10 +170,17 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, Fr
   }
   assert(res == VK_SUCCESS);
 
-  res = vkWaitForFences(device, 1, &fb->flight_fence[fb->current_buffer], true, UINT64_MAX);
-  assert(res == VK_SUCCESS);
-
   fb->current_frame = (fb->current_frame + 1) % fb->swapchain_image_count;
+
+  //wait for the next frame ( https://stackoverflow.com/a/35573312 )
+  if (fb->num_swaps > fb->swapchain_image_count - 1) {
+    res = vkWaitForFences(device, 1, &fb->flight_fence[fb->current_frame], true, UINT64_MAX);
+    assert(res == VK_SUCCESS);
+
+    res = vkResetFences(device, 1, &fb->flight_fence[fb->current_frame]);
+    assert(res == VK_SUCCESS);
+  }
+  fb->num_swaps++;
 }
 
 int main() {
