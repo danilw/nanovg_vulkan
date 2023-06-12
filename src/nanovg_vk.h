@@ -1089,8 +1089,8 @@ static void vknvg_fill(VKNVGcontext *vk, VKNVGcall *call, uint32_t call_index) {
     vkCmdDraw(cmdBuffer, paths[i].fillCount, 1, 0, 0);
   }
 
-  vknvg_setUniforms(vk, vk->uniformDescriptorSet1[call_index], call->uniformOffset + vk->fragSize, call->image);
-  vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet1[call_index], 0, nullptr);
+  vknvg_setUniforms(vk, vk->uniformDescriptorSet2[call_index], call->uniformOffset + vk->fragSize, call->image);
+  vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk->pipelineLayout, 0, 1, &vk->uniformDescriptorSet2[call_index], 0, nullptr);
 
   if (vk->flags & NVG_ANTIALIAS) {
 
