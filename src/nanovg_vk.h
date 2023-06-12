@@ -1784,6 +1784,9 @@ static void vknvg_renderDelete(void *uptr) {
   free(vk->fragUniformBuffer);
   free(vk->vertUniformBuffer);
 
+  free(vk->uniformDescriptorSet1);
+  free(vk->uniformDescriptorSet2);
+
   free(vk->textures);
   free(vk->pipelines);
   free(vk->calls);

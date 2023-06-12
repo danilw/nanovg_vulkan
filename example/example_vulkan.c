@@ -66,7 +66,7 @@ void prepareFrame(VkDevice device, VkCommandBuffer *cmd_buffer, FrameBuffers *fb
   assert(res == VK_SUCCESS);
 
   const VkCommandBufferBeginInfo cmd_buf_info = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-  res = vkBeginCommandBuffer(cmd_buffer[fb->current_buffer], &cmd_buf_info);
+  res = vkBeginCommandBuffer(cmd_buffer[fb->current_frame], &cmd_buf_info);
   assert(res == VK_SUCCESS);
 
   VkClearValue clear_values[2];
