@@ -382,6 +382,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
         RedrawWindow(os_window.window, NULL, NULL, RDW_INTERNALPAINT);
     }
 
+    res = vkQueueWaitIdle(queue);
+    assert(res == VK_SUCCESS);
+
     freeDemoData(vg, &data);
     nvgDeleteVk(vg);
     destroyFrameBuffers(device, &fb, queue);

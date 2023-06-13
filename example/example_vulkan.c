@@ -360,6 +360,9 @@ int main() {
     glfwPollEvents();
   }
 
+  res = vkQueueWaitIdle(queue);
+  assert(res == VK_SUCCESS);
+
   freeDemoData(vg, &data);
   nvgDeleteVk(vg);
 
