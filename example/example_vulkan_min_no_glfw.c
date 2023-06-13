@@ -302,7 +302,7 @@ void init_nanovg_vulkan(VkPhysicalDevice gpu, VkSurfaceKHR *surface, int winWidt
     create_info.renderpass = fb->render_pass;
     create_info.cmdBuffer = (*cmd_buffer);
     create_info.swapchainImageCount = fb->swapchain_image_count;
-    create_info.currentFrame = &fb->current_buffer;
+    create_info.currentFrame = &fb->current_frame;
 
     int flags = 0;
 #ifndef NDEBUG
@@ -766,7 +766,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
                 resize_event=false;
             }else{
                 if (!os_window.is_minimized){
-                    prepareFrame(device->device, cmd_buffer[fb->current_buffer], &fb);
+                    prepareFrame(device->device, cmd_buffer[fb.current_frame], &fb);
                     if(resize_event)break;
                 }
                 updateGraph(&fps, os_window.app_data.iTimeDelta);
@@ -786,7 +786,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
                     sleep_ms(10);
                 }
                 else {
-                    submitFrame(device->device, queue, cmd_buffer, &fb);
+                    submitFrame(device->device, queue, cmd_buffer[fb.current_frame], &fb);
                 }
                 update_params(&os_window.app_data, os_window.fps_lock);
             }
