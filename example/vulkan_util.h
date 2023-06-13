@@ -718,7 +718,9 @@ FrameBuffers createFrameBuffers(const VulkanDevice *device, VkSurfaceKHR surface
 
   return buffer;
 }
-void destroyFrameBuffers(const VulkanDevice *device, FrameBuffers *buffer) {
+void destroyFrameBuffers(const VulkanDevice *device, FrameBuffers *buffer, VkQueue queue) {
+  VkResult res = vkQueueWaitIdle(queue);
+  assert(res == VK_SUCCESS);
 
   for (uint32_t i = 0; i < buffer->swapchain_image_count; ++i) {
     if (buffer->present_complete_semaphore[i] != VK_NULL_HANDLE) {
