@@ -160,7 +160,7 @@ void init_win_params(struct app_os_window *os_window)
 
 bool resize_event = false;
 
-void prepareFrame(VkDevice device, VkCommandBuffer *cmd_buffer, FrameBuffers *fb) {
+void prepareFrame(VkDevice device, VkCommandBuffer cmd_buffer, FrameBuffers *fb) {
     VkResult res;
 
     // Get the index of the next available swapchain image:
@@ -177,7 +177,7 @@ void prepareFrame(VkDevice device, VkCommandBuffer *cmd_buffer, FrameBuffers *fb
     assert(res == VK_SUCCESS);
 
     const VkCommandBufferBeginInfo cmd_buf_info = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-    res = vkBeginCommandBuffer(cmd_buffer[fb->current_buffer], &cmd_buf_info);
+    res = vkBeginCommandBuffer(cmd_buffer, &cmd_buf_info);
     assert(res == VK_SUCCESS);
 
     VkClearValue clear_values[2];
@@ -200,7 +200,7 @@ void prepareFrame(VkDevice device, VkCommandBuffer *cmd_buffer, FrameBuffers *fb
     rp_begin.clearValueCount = 2;
     rp_begin.pClearValues = clear_values;
 
-    vkCmdBeginRenderPass(cmd_buffer[fb->current_buffer], &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(cmd_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 
     VkViewport viewport;
     viewport.width = (float) fb->buffer_size.width;
@@ -209,16 +209,16 @@ void prepareFrame(VkDevice device, VkCommandBuffer *cmd_buffer, FrameBuffers *fb
     viewport.maxDepth = (float) 1.0f;
     viewport.x = (float) rp_begin.renderArea.offset.x;
     viewport.y = (float) rp_begin.renderArea.offset.y;
-    vkCmdSetViewport(cmd_buffer[fb->current_buffer], 0, 1, &viewport);
+    vkCmdSetViewport(cmd_buffer, 0, 1, &viewport);
 
     VkRect2D scissor = rp_begin.renderArea;
-    vkCmdSetScissor(cmd_buffer[fb->current_buffer], 0, 1, &scissor);
+    vkCmdSetScissor(cmd_buffer, 0, 1, &scissor);
 }
 
-void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, FrameBuffers *fb) {
+void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer cmd_buffer, FrameBuffers *fb) {
     VkResult res;
 
-    vkCmdEndRenderPass(cmd_buffer[fb->current_buffer]);
+    vkCmdEndRenderPass(cmd_buffer);
 
     VkImageMemoryBarrier image_barrier = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -237,7 +237,7 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, Fr
                     .layerCount = 1,
             },
     };
-    vkCmdPipelineBarrier(cmd_buffer[fb->current_buffer],
+    vkCmdPipelineBarrier(cmd_buffer,
                          VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
                          VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
                          0,
@@ -245,7 +245,7 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, Fr
                          0, NULL,
                          1, &image_barrier);
 
-    vkEndCommandBuffer(cmd_buffer[fb->current_buffer]);
+    vkEndCommandBuffer(cmd_buffer);
 
     VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
@@ -255,7 +255,7 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer *cmd_buffer, Fr
     submit_info.pWaitSemaphores = &fb->present_complete_semaphore[fb->current_frame];
     submit_info.pWaitDstStageMask = &pipe_stage_flags;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &cmd_buffer[fb->current_buffer];
+    submit_info.pCommandBuffers = &cmd_buffer;
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = &fb->render_complete_semaphore[fb->current_frame];
 
@@ -384,7 +384,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR pCmdLine,
 
     freeDemoData(vg, &data);
     nvgDeleteVk(vg);
-    destroyFrameBuffers(device, &fb);
+    destroyFrameBuffers(device, &fb, queue);
     vkDestroySurfaceKHR(instance, surface, NULL);
     destroyVulkanDevice(device);
 
@@ -480,7 +480,7 @@ int main(int argc, char **argv)
         }else{
           
           if (!os_window.is_minimized){
-            prepareFrame(device->device, cmd_buffer, &fb);
+            prepareFrame(device->device, cmd_buffer[fb->current_frame], &fb);
             if(resize_event)continue;
           }
           updateGraph(&fps, os_window.app_data.iTimeDelta);
@@ -500,7 +500,7 @@ int main(int argc, char **argv)
               sleep_ms(10);
           }
           else {
-            submitFrame(device->device, queue, cmd_buffer, &fb);
+            submitFrame(device->device, queue, cmd_buffer[fb->current_frame], &fb);
           }
           update_params(&os_window.app_data, os_window.fps_lock);
         }
@@ -508,7 +508,7 @@ int main(int argc, char **argv)
     
     freeDemoData(vg, &data);
     nvgDeleteVk(vg);
-    destroyFrameBuffers(device, &fb);
+    destroyFrameBuffers(device, &fb, queue);
     vkDestroySurfaceKHR(instance, surface, NULL);
     destroyVulkanDevice(device);
     
@@ -761,12 +761,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
             int winWidth = os_window.app_data.iResolution[0];
             int winHeight = os_window.app_data.iResolution[1];
             if (resize_event) {
-                destroyFrameBuffers(device, &fb);
+                destroyFrameBuffers(device, &fb, queue);
                 fb = createFrameBuffers(device, surface, queue, winWidth, winHeight, 0);
                 resize_event=false;
             }else{
                 if (!os_window.is_minimized){
-                    prepareFrame(device->device, cmd_buffer, &fb);
+                    prepareFrame(device->device, cmd_buffer[fb->current_buffer], &fb);
                     if(resize_event)break;
                 }
                 updateGraph(&fps, os_window.app_data.iTimeDelta);
