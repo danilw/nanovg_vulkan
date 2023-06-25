@@ -447,11 +447,11 @@ int main(int argc, char **argv)
   VkQueue queue;
   NVGcontext *vg;
   FrameBuffers fb;
-  VkCommandBuffer cmd_buffer;
+  VkCommandBuffer* cmd_buffer;
   DemoData data;
   PerfGraph fps;
   init_nanovg_vulkan(gpu, &surface, winWidth, winHeight, &queue, &vg, &fb, &cmd_buffer, &device, &fps, &data);
-  
+
     while (!os_window.app_data.quit)
     {
         xcb_generic_event_t *event;
@@ -477,7 +477,7 @@ int main(int argc, char **argv)
         if ((resize_event)||(winWidth != cwinWidth || winHeight != cwinHeight)) {
           winWidth = cwinWidth;
           winHeight = cwinHeight;
-          destroyFrameBuffers(device, &fb);
+          destroyFrameBuffers(device, &fb, queue);
           fb = createFrameBuffers(device, surface, queue, winWidth, winHeight, 0);
           resize_event=false;
         }else{
