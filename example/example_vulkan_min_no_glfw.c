@@ -483,7 +483,7 @@ int main(int argc, char **argv)
         }else{
           
           if (!os_window.is_minimized){
-            prepareFrame(device->device, cmd_buffer[fb->current_frame], &fb);
+            prepareFrame(device->device, cmd_buffer[fb.current_frame], &fb);
             if(resize_event)continue;
           }
           updateGraph(&fps, os_window.app_data.iTimeDelta);
@@ -503,7 +503,7 @@ int main(int argc, char **argv)
               sleep_ms(10);
           }
           else {
-            submitFrame(device->device, queue, cmd_buffer[fb->current_frame], &fb);
+            submitFrame(device->device, queue, cmd_buffer[fb.current_frame], &fb);
           }
           update_params(&os_window.app_data, os_window.fps_lock);
         }
