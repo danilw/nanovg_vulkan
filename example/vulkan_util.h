@@ -1,6 +1,12 @@
 
 #pragma once
 
+#ifdef __APPLE__
+const bool isApplePlatform = true;
+#else
+const bool isApplePlatform = false;
+#endif
+
 typedef struct VulkanDevice {
   VkPhysicalDevice gpu;
   VkPhysicalDeviceProperties gpuProperties;
@@ -98,6 +104,8 @@ typedef struct FrameBuffers {
   VkFramebuffer *framebuffers;
 
   uint32_t current_buffer;
+  uint32_t current_frame;
+  uint64_t num_swaps;
 
   VkExtent2D buffer_size;
 
@@ -105,9 +113,9 @@ typedef struct FrameBuffers {
 
   VkFormat format;
   DepthBuffer depth;
-  VkSemaphore present_complete_semaphore;
-  VkSemaphore render_complete_semaphore;
-
+  VkSemaphore *present_complete_semaphore;
+  VkSemaphore *render_complete_semaphore;
+  VkFence *flight_fence;
 } FrameBuffers;
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
@@ -136,10 +144,18 @@ static VkInstance createVkInstance(bool enable_debug_layer) {
     append_extensions_count = 0;
   }
 
+  static const char *apple_extensions[] = {
+    VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME,
+  };
+  uint32_t apple_extensions_count = sizeof(apple_extensions) / sizeof(apple_extensions[0]);
+  if (!isApplePlatform) {
+    apple_extensions_count = 0;
+  }
+
   uint32_t extensions_count = 0;
   const char **glfw_extensions = glfwGetRequiredInstanceExtensions(&extensions_count);
 
-  const char **extensions = (const char **)calloc(extensions_count + append_extensions_count, sizeof(char *));
+  const char **extensions = (const char **)calloc(extensions_count + append_extensions_count + apple_extensions_count, sizeof(char *));
 
   for (uint32_t i = 0; i < extensions_count; ++i) {
     extensions[i] = glfw_extensions[i];
@@ -147,12 +163,18 @@ static VkInstance createVkInstance(bool enable_debug_layer) {
   for (uint32_t i = 0; i < append_extensions_count; ++i) {
     extensions[extensions_count++] = append_extensions[i];
   }
+  for (uint32_t i = 0; i < apple_extensions_count; ++i) {
+    extensions[extensions_count++] = apple_extensions[i];
+  }
 
   // initialize the VkInstanceCreateInfo structure
   VkInstanceCreateInfo inst_info = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
   inst_info.pApplicationInfo = &app_info;
   inst_info.enabledExtensionCount = extensions_count;
   inst_info.ppEnabledExtensionNames = extensions;
+  if (isApplePlatform) {
+    inst_info.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+  }
 
   static const char *instance_validation_layers[] = {
       "VK_LAYER_KHRONOS_validation"
@@ -172,7 +194,7 @@ static VkInstance createVkInstance(bool enable_debug_layer) {
     }
     free(layerprop);
   }
-  
+
   VkInstance inst;
   VkResult res;
   res = vkCreateInstance(&inst_info, NULL, &inst);
@@ -237,18 +259,18 @@ VkCommandPool createCmdPool(VulkanDevice *device) {
   assert(res == VK_SUCCESS);
   return cmd_pool;
 }
-VkCommandBuffer createCmdBuffer(VkDevice device, VkCommandPool cmd_pool) {
+VkCommandBuffer* createCmdBuffer(VkDevice device, VkCommandPool cmd_pool, uint32_t command_buffer_count) {
 
-  VkResult res;
-  VkCommandBufferAllocateInfo cmd = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-  cmd.commandPool = cmd_pool;
-  cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  cmd.commandBufferCount = 1;
+    VkResult res;
+    VkCommandBufferAllocateInfo cmd = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
+    cmd.commandPool = cmd_pool;
+    cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmd.commandBufferCount = command_buffer_count;
 
-  VkCommandBuffer cmd_buffer;
-  res = vkAllocateCommandBuffers(device, &cmd, &cmd_buffer);
-  assert(res == VK_SUCCESS);
-  return cmd_buffer;
+    VkCommandBuffer *cmd_buffer = calloc(command_buffer_count, sizeof (VkCommandBuffer));
+    res = vkAllocateCommandBuffers(device, &cmd, cmd_buffer);
+    assert(res == VK_SUCCESS);
+    return cmd_buffer;
 }
 
 bool memory_type_from_properties(VkPhysicalDeviceMemoryProperties memoryProps, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex) {
@@ -270,7 +292,7 @@ DepthBuffer createDepthBuffer(const VulkanDevice *device, int width, int height)
   VkResult res;
   DepthBuffer depth;
   depth.format = VK_FORMAT_D24_UNORM_S8_UINT;
-  
+
   #define dformats 3
   const VkFormat depth_formats[dformats] = {VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT, VK_FORMAT_D16_UNORM_S8_UINT};
   VkImageTiling image_tilling;
@@ -292,7 +314,7 @@ DepthBuffer createDepthBuffer(const VulkanDevice *device, int width, int height)
       exit(-1);
     }
   }
-  
+
   const VkFormat depth_format = depth.format;
 
   VkImageCreateInfo image_info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
@@ -498,12 +520,12 @@ FrameBuffers createFrameBuffers(const VulkanDevice *device, VkSurfaceKHR surface
   if (!supportsPresent) {
     exit(-1); //does not supported.
   }
-  VkCommandBuffer setup_cmd_buffer = createCmdBuffer(device->device, device->commandPool);
+  VkCommandBuffer *setup_cmd_buffer = createCmdBuffer(device->device, device->commandPool, 1);
 
   const VkCommandBufferBeginInfo cmd_buf_info = {
       VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
   };
-  vkBeginCommandBuffer(setup_cmd_buffer, &cmd_buf_info);
+  vkBeginCommandBuffer(setup_cmd_buffer[0], &cmd_buf_info);
 
   VkFormat colorFormat = VK_FORMAT_B8G8R8A8_UNORM;
   VkColorSpaceKHR colorSpace;
@@ -629,7 +651,7 @@ FrameBuffers createFrameBuffers(const VulkanDevice *device, VkSurfaceKHR surface
 
   SwapchainBuffers *swap_chain_buffers = (SwapchainBuffers *)malloc(swapchain_image_count * sizeof(SwapchainBuffers));
   for (uint32_t i = 0; i < swapchain_image_count; i++) {
-    swap_chain_buffers[i] = createSwapchainBuffers(device, colorFormat, setup_cmd_buffer, swapchainImages[i]);
+    swap_chain_buffers[i] = createSwapchainBuffers(device, colorFormat, setup_cmd_buffer[0], swapchainImages[i]);
   }
   free(swapchainImages);
 
@@ -656,15 +678,16 @@ FrameBuffers createFrameBuffers(const VulkanDevice *device, VkSurfaceKHR surface
     assert(res == VK_SUCCESS);
   }
 
-  vkEndCommandBuffer(setup_cmd_buffer);
+  vkEndCommandBuffer(setup_cmd_buffer[0]);
   VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
   submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &setup_cmd_buffer;
+  submitInfo.pCommandBuffers = setup_cmd_buffer;
 
   vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
   vkQueueWaitIdle(queue);
 
-  vkFreeCommandBuffers(device->device, device->commandPool, 1, &setup_cmd_buffer);
+  vkFreeCommandBuffers(device->device, device->commandPool, 1, setup_cmd_buffer);
+  free(setup_cmd_buffer);
 
   FrameBuffers buffer = {0};
   buffer.swap_chain = swap_chain;
@@ -676,22 +699,39 @@ FrameBuffers createFrameBuffers(const VulkanDevice *device, VkSurfaceKHR surface
   buffer.buffer_size = buffer_size;
   buffer.render_pass = render_pass;
   buffer.depth = depth;
+  buffer.present_complete_semaphore = (VkSemaphore *)calloc(swapchain_image_count, sizeof(VkSemaphore));
+  buffer.render_complete_semaphore = (VkSemaphore *)calloc(swapchain_image_count, sizeof(VkSemaphore));
+  buffer.flight_fence = (VkFence *)calloc(swapchain_image_count, sizeof(VkFence));
 
   VkSemaphoreCreateInfo presentCompleteSemaphoreCreateInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-  res = vkCreateSemaphore(device->device, &presentCompleteSemaphoreCreateInfo, NULL, &buffer.present_complete_semaphore);
-  assert(res == VK_SUCCESS);
+  VkFenceCreateInfo fenceCreateInfo = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+  for (i = 0; i < swapchain_image_count; i++) {
+    res = vkCreateSemaphore(device->device, &presentCompleteSemaphoreCreateInfo, NULL, &buffer.present_complete_semaphore[i]);
+    assert(res == VK_SUCCESS);
 
-  res = vkCreateSemaphore(device->device, &presentCompleteSemaphoreCreateInfo, NULL, &buffer.render_complete_semaphore);
+    res = vkCreateSemaphore(device->device, &presentCompleteSemaphoreCreateInfo, NULL, &buffer.render_complete_semaphore[i]);
+    assert(res == VK_SUCCESS);
+
+    res = vkCreateFence(device->device, &fenceCreateInfo, NULL, &buffer.flight_fence[i]);
+    assert(res == VK_SUCCESS);
+  }
 
   return buffer;
 }
-void destroyFrameBuffers(const VulkanDevice *device, FrameBuffers *buffer) {
+void destroyFrameBuffers(const VulkanDevice *device, FrameBuffers *buffer, VkQueue queue) {
+  VkResult res = vkQueueWaitIdle(queue);
+  assert(res == VK_SUCCESS);
 
-  if (buffer->present_complete_semaphore != VK_NULL_HANDLE) {
-    vkDestroySemaphore(device->device, buffer->present_complete_semaphore, NULL);
-  }
-  if (buffer->render_complete_semaphore != VK_NULL_HANDLE) {
-    vkDestroySemaphore(device->device, buffer->render_complete_semaphore, NULL);
+  for (uint32_t i = 0; i < buffer->swapchain_image_count; ++i) {
+    if (buffer->present_complete_semaphore[i] != VK_NULL_HANDLE) {
+      vkDestroySemaphore(device->device, buffer->present_complete_semaphore[i], NULL);
+    }
+    if (buffer->render_complete_semaphore[i] != VK_NULL_HANDLE) {
+      vkDestroySemaphore(device->device, buffer->render_complete_semaphore[i], NULL);
+    }
+    if (buffer->flight_fence[i] != VK_NULL_HANDLE) {
+      vkDestroyFence(device->device, buffer->flight_fence[i], NULL);
+    }
   }
 
   for (uint32_t i = 0; i < buffer->swapchain_image_count; ++i) {
@@ -708,4 +748,7 @@ void destroyFrameBuffers(const VulkanDevice *device, FrameBuffers *buffer) {
 
   free(buffer->framebuffers);
   free(buffer->swap_chain_buffers);
+  free(buffer->present_complete_semaphore);
+  free(buffer->render_complete_semaphore);
+  free(buffer->flight_fence);
 }

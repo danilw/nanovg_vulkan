@@ -53,9 +53,10 @@ void prepareFrame(VkDevice device, VkCommandBuffer cmd_buffer, FrameBuffers *fb)
 
   // Get the index of the next available swapchain image:
   res = vkAcquireNextImageKHR(device, fb->swap_chain, UINT64_MAX,
-                              fb->present_complete_semaphore,
-                              0,
+                              fb->present_complete_semaphore[fb->current_frame],
+                              VK_NULL_HANDLE,
                               &fb->current_buffer);
+
   if (res == VK_ERROR_OUT_OF_DATE_KHR)
   {
       resize_event = true;
@@ -139,15 +140,14 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer cmd_buffer, Fra
   VkSubmitInfo submit_info = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
   submit_info.pNext = NULL;
   submit_info.waitSemaphoreCount = 1;
-  submit_info.pWaitSemaphores = &fb->present_complete_semaphore;
+  submit_info.pWaitSemaphores = &fb->present_complete_semaphore[fb->current_frame];
   submit_info.pWaitDstStageMask = &pipe_stage_flags;
   submit_info.commandBufferCount = 1;
   submit_info.pCommandBuffers = &cmd_buffer;
   submit_info.signalSemaphoreCount = 1;
-  submit_info.pSignalSemaphores = &fb->render_complete_semaphore;
+  submit_info.pSignalSemaphores = &fb->render_complete_semaphore[fb->current_frame];
 
-  /* Queue the command buffer for execution */
-  res = vkQueueSubmit(queue, 1, &submit_info, 0);
+  res = vkQueueSubmit(queue, 1, &submit_info, fb->flight_fence[fb->current_frame]);
   assert(res == VK_SUCCESS);
 
   /* Now present the image in the window */
@@ -158,7 +158,7 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer cmd_buffer, Fra
   present.pSwapchains = &fb->swap_chain;
   present.pImageIndices = &fb->current_buffer;
   present.waitSemaphoreCount = 1;
-  present.pWaitSemaphores = &fb->render_complete_semaphore;
+  present.pWaitSemaphores = &fb->render_complete_semaphore[fb->current_frame];
 
   res = vkQueuePresentKHR(queue, &present);
   if (res == VK_ERROR_OUT_OF_DATE_KHR)
@@ -170,7 +170,16 @@ void submitFrame(VkDevice device, VkQueue queue, VkCommandBuffer cmd_buffer, Fra
   }
   assert(res == VK_SUCCESS);
 
-  res = vkQueueWaitIdle(queue);
+  fb->current_frame = (fb->current_frame + 1) % fb->swapchain_image_count;
+  fb->num_swaps++;
+
+  if (fb->num_swaps >= fb->swapchain_image_count) {
+    res = vkWaitForFences(device, 1, &fb->flight_fence[fb->current_frame], true, UINT64_MAX);
+    assert(res == VK_SUCCESS);
+
+    res = vkResetFences(device, 1, &fb->flight_fence[fb->current_frame]);
+    assert(res == VK_SUCCESS);
+  }
 }
 
 int main() {
@@ -284,12 +293,14 @@ int main() {
   vkGetDeviceQueue(device->device, device->graphicsQueueFamilyIndex, 0, &queue);
   FrameBuffers fb = createFrameBuffers(device, surface, queue, winWidth, winHeight, 0);
 
-  VkCommandBuffer cmd_buffer = createCmdBuffer(device->device, device->commandPool);
+  VkCommandBuffer *cmd_buffer = createCmdBuffer(device->device, device->commandPool, fb.swapchain_image_count);
   VKNVGCreateInfo create_info = {0};
   create_info.device = device->device;
   create_info.gpu = device->gpu;
   create_info.renderpass = fb.render_pass;
   create_info.cmdBuffer = cmd_buffer;
+  create_info.swapchainImageCount = fb.swapchain_image_count;
+  create_info.currentFrame = &fb.current_frame;
 
   int flags = 0;
 #ifndef NDEBUG
@@ -323,12 +334,12 @@ int main() {
     if ((resize_event)||(winWidth != cwinWidth || winHeight != cwinHeight)) {
       winWidth = cwinWidth;
       winHeight = cwinHeight;
-      destroyFrameBuffers(device, &fb);
+      destroyFrameBuffers(device, &fb, queue);
       fb = createFrameBuffers(device, surface, queue, winWidth, winHeight, 0);
       resize_event=false;
     }else{
 
-    prepareFrame(device->device, cmd_buffer, &fb);
+    prepareFrame(device->device, cmd_buffer[fb.current_frame], &fb);
     if(resize_event)continue;
     t = glfwGetTime();
     dt = t - prevt;
@@ -344,15 +355,18 @@ int main() {
 
     nvgEndFrame(vg);
 
-    submitFrame(device->device, queue, cmd_buffer, &fb);
+    submitFrame(device->device, queue, cmd_buffer[fb.current_frame], &fb);
 }
     glfwPollEvents();
   }
 
+  res = vkQueueWaitIdle(queue);
+  assert(res == VK_SUCCESS);
+
   freeDemoData(vg, &data);
   nvgDeleteVk(vg);
 
-  destroyFrameBuffers(device, &fb);
+  destroyFrameBuffers(device, &fb, queue);
 
   destroyVulkanDevice(device);
 
@@ -361,6 +375,8 @@ int main() {
   vkDestroyInstance(instance, NULL);
 
   glfwDestroyWindow(window);
+
+  free(cmd_buffer);
 
   printf("Average Frame Time: %.2f ms\n", getGraphAverage(&fps) * 1000.0f);
   //printf("          CPU Time: %.2f ms\n", getGraphAverage(&cpuGraph) * 1000.0f);
