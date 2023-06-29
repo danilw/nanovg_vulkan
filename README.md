@@ -14,10 +14,10 @@ ___
 
 ### Known bugs-related info:
 
-- **Bug** - **DPI scale is broken** when it `!=1`, I know source of problem and will fix soon. Currectly - DPI scale set to 1 always. Read https://github.com/danilw/nanovg-vulkan-glfw-integration-demo/issues/1 
+- **Bug** - **DPI scale is broken** when it `!=1`, Currectly - DPI scale set to 1 always. Read https://github.com/danilw/nanovg-vulkan-glfw-integration-demo/issues/1
+- **Bug** - **crash on resize on AMD-GPU only in Linux in Wayland**. Read https://github.com/danilw/nanovg-vulkan-glfw-integration-demo/issues/2
 - Fix what Cppcheck pointing, unused variables etc, not bugs.
-- Performance not optimized - read [**discussion there**](https://github.com/memononen/nanovg/issues/614)
-
+- Performance - after SubiyaCryolite pull https://github.com/danilw/nanovg_vulkan/pull/7 performance of Vulkan version very close to OpenGL.
 ___
 
 # Build:
@@ -42,14 +42,14 @@ ___
 
 # Examples description:
 
-*Multiple frames in flight* - only ***nanovg-vulkan-glfw-integration-demo***(link below) has example of using multiple frames in flight.\
-Every other example use single frame, *this is reason of low FPS compare to OpenGL* (look [this my comment](https://github.com/memononen/nanovg/issues/614#issuecomment-1102528085) there screenshots Vulkan to OpenGL).
+*Multiple frames in flight* - *example_vulkan.c* is multiple frames in flight example, *example_vulkan_min_no_glfw.c* is single frame in flight. Clearly visible on FPS - with multiple frames about 3x better FPS.
 ___
 
 **example_vulkan.c** - minimal NanoVG example that use GLFW.
 
 **example_vulkan_min_no_glfw.c** - same as above but not using GLFW, supported Linux and Windows.
 
+<!---
 ### Two external examples:
 
 **[nanovg-vulkan-min-integration-demo](https://github.com/danilw/nanovg-vulkan-min-integration-demo)** - repository with minimal RenderPass integration example. Not using any libraries, no GLFW, only NanoVG code and C. **Look description and screenshot on link**.
@@ -61,10 +61,28 @@ ___
 About *RenderPass integration* - copy paste code from *integration* examples above after your `vkCmdEndRenderPass` (or before `vkCmdBeginRenderPass`) and everything should work.
 
 *Framebuffer integration*, where UI rendered in its own Framebuffer - I did not add example for this case, because it should be obvious - just replace framebuffer RenderPass with RenderPass of NanoVG *integration* examples above(look linked commit).
+-->
+___
+## 2023 update - huge performance improvement thanks to [**@SubiyaCryolite**](https://github.com/SubiyaCryolite) 
+
+SubiyaCryolite pull request [Optimizations > Cached Descriptor Sets, Implied Multiple Frames in Flight, Fencing for faster perf](https://github.com/danilw/nanovg_vulkan/pull/7)
+
+-   Support for multiple command buffers, specifically one per swap-chain image / buffer
+-   Caching of descriptor sets, removing the need to create new ones per draw func or to call `vkResetDescriptorPool` per frame.
+-   Under `example_vulkan`, using `vkWaitForFences` to control rendering as opposed to `vkQueueWaitIdle` (seems to be the biggest perf booster). This change also has implied "multiple frames in flight" as dictated by the swap-chain image count.
+-   Using persisted mapped buffers via `VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT` instead of `VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT` , allows to skip calls to `vkMap/UnmapMemory` per frame
+
+*Link to version before this change [5ba9d31](https://github.com/danilw/nanovg_vulkan/tree/5ba9d31165cebfb06abb9929ee9aa69a0abe86b1), this change [10d5211](https://github.com/danilw/nanovg_vulkan/commit/10d5211ac678f615a58462c270dff9eb7ffe4872).* 
+___
+
+<!---
 ___
 
 ### 2022 update 2 - few people ask me for more examples, so I added more examples.
+-->
 ___
+
+
 
 ### 2022 update - thanks to [**@nidefawl**](https://github.com/nidefawl) [pull request](https://github.com/danilw/nanovg_vulkan/pull/5) with lots of changes:
 
