@@ -4,7 +4,7 @@
 
 ## if you want - fork it and update it as you with, this is working in 2024 but im not going to update or change anything anymore.
 
-### Notice - I wanted to fix one major bug here - DPI scale does not work, read https://github.com/danilw/nanovg_vulkan/tree/master?tab=readme-ov-file#known-bugs-related-info but I have no motivation to do it, too much effort, pointless no one need task.
+### Notice - I wanted to fix one major bug here - DPI scale does not work, read [known-bugs-related-info](https://github.com/danilw/nanovg_vulkan/tree/master?tab=readme-ov-file#known-bugs-related-info) but I have no motivation to do it, too much effort, pointless no one need task.
 
 Contact me in Discord or anywhere else if you want to ask some tech-info stuff, or I can add your "active" fork of this as link to this page.
 
