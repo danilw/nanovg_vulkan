@@ -1,3 +1,15 @@
+# 2024 - Im archive this.
+
+# Just use IMGUI
+
+## if you want - fork it and update it as you with, this is working in 2024 but im not going to update or change anything anymore.
+
+### Notice - I wanted to fix one major bug here - DPI scale does not work, read https://github.com/danilw/nanovg_vulkan/tree/master?tab=readme-ov-file#known-bugs-related-info but I have no motivation to do it, too much effort, pointless no one need task.
+
+Contact me in Discord or anywhere else if you want to ask some tech-info stuff, or I can add your "active" fork of this as link to this page.
+
+___
+
 added vulkan build, and cmake files, removed premake4.lua
 
 **Why I made this** - I made it as a "test task for Vulkan related job" a year ago, for me this project has no real use. I would recommend for everyone use [**imgui**](https://github.com/ocornut/imgui) if you look for production-ready Vulkan UI, also look on [**egui**](https://github.com/emilk/egui/). I will not support or update this project at all, the last update was just to fix bugs and Validation errors.
@@ -49,7 +61,10 @@ ___
 
 **example_vulkan_min_no_glfw.c** - same as above but not using GLFW, supported Linux and Windows.
 
-<!---
+___
+
+## Old examples, they not compatible with this latest nanovg_vulkan.
+
 ### Two external examples:
 
 **[nanovg-vulkan-min-integration-demo](https://github.com/danilw/nanovg-vulkan-min-integration-demo)** - repository with minimal RenderPass integration example. Not using any libraries, no GLFW, only NanoVG code and C. **Look description and screenshot on link**.
@@ -61,7 +76,9 @@ ___
 About *RenderPass integration* - copy paste code from *integration* examples above after your `vkCmdEndRenderPass` (or before `vkCmdBeginRenderPass`) and everything should work.
 
 *Framebuffer integration*, where UI rendered in its own Framebuffer - I did not add example for this case, because it should be obvious - just replace framebuffer RenderPass with RenderPass of NanoVG *integration* examples above(look linked commit).
--->
+
+___
+
 ___
 ## 2023 update - huge performance improvement thanks to [**@SubiyaCryolite**](https://github.com/SubiyaCryolite) 
 
