@@ -4,6 +4,15 @@
 
 ## if you want - fork it and update it as you with, this is working in 2024 but im not going to update or change anything anymore.
 
+___
+
+**Note about Vulkan** - this nanovg_vulkan is Vulkan 1.0 project.\
+**Vulkan 1.3** already released with about 10 years back GPU support in drivers. Vulkan 1.3 have VK_KHR_dynamic_rendering in core.\
+*As minmal example of setup of complex pipeline look this blog* - [modern Vulkan with descriptor indexing, dynamic rendering and shader objects tutorial ](https://amini-allight.org/post/vknew-modern-vulkan-with-descriptor-indexing-dynamic-rendering-and-shader-objects) - and this repository [**vknew**](https://gitlab.com/amini-allight/vknew).\
+*I think rewriting this entire project from scratch in Vulkan 1.3 - will be faster and easier than fixin some bugs here and improving it.*
+
+___
+
 ### Notice - I wanted to fix one major bug here - DPI scale does not work, read [known-bugs-related-info](https://github.com/danilw/nanovg_vulkan/tree/master?tab=readme-ov-file#known-bugs-related-info) but I have no motivation to do it, too much effort, pointless no one need task.
 
 *Contact me in Discord or anywhere else if you want to ask some tech-info stuff, or I can add your "active" fork of this as link to this page.*
