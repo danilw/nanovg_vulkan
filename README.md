@@ -6,6 +6,10 @@
 
 ___
 
+## Check this fork - [https://github.com/SubiyaCryolite/nanovg_vulkan](https://github.com/SubiyaCryolite/nanovg_vulkan) - by SubiyaCryolite who author of huge improvement in this repository - this fork may update something or be active.
+
+___
+
 **Note about Vulkan** - this nanovg_vulkan is Vulkan 1.0 project.\
 **Vulkan 1.3** already released with about 10 years back GPU support in drivers. Vulkan 1.3 have VK_KHR_dynamic_rendering in core.\
 *As minmal example of setup of complex pipeline look this blog* - [modern Vulkan with descriptor indexing, dynamic rendering and shader objects tutorial ](https://amini-allight.org/post/vknew-modern-vulkan-with-descriptor-indexing-dynamic-rendering-and-shader-objects) - and this repository [**vknew**](https://gitlab.com/amini-allight/vknew).\
