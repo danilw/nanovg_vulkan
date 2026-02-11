@@ -33,7 +33,7 @@ ___
 
 ### Contact with me:
 
-**Matrix-chat room `#Shadertoy:envs.net` invite link** [matrix.to](https://matrix.to/#/#Shadertoy:envs.net) *(use web UI Element if you dont have acc)*
+**Contacts on my profile page [https://github.com/danilw](https://github.com/danilw)**
 
 ___
 
